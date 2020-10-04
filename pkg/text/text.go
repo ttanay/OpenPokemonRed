@@ -7,6 +7,7 @@ import (
 	"pokered/pkg/joypad"
 	"pokered/pkg/store"
 	"pokered/pkg/util"
+	"strconv"
 	"strings"
 
 	"github.com/hajimehoshi/ebiten"
@@ -25,7 +26,7 @@ func Blink(b string) {
 	if b == " " || b == "▼" {
 		blink = b
 	}
-	placeChar(blink, 18, 16, false)
+	PlaceChar(blink, 18, 16)
 }
 
 func resetBlink() {
@@ -49,14 +50,19 @@ func PlaceString(str string, x, y util.Tile) {
 // PlaceStringAtOnce print string at once
 func PlaceStringAtOnce(str string, x, y util.Tile) {
 	Seek(x, y)
-	str = preprocess(str)
 	for str != "" {
-		str = PlaceChar(str)
+		str = PlaceStringOneByOne(str)
 	}
 }
 
-// PlaceChar place CurText into screen one by one
-func PlaceChar(str string) string {
+// PlaceUintAtOnce print uint value at once
+func PlaceUintAtOnce(num uint, x, y util.Tile) {
+	str := strconv.FormatUint(uint64(num), 10)
+	PlaceStringAtOnce(str, x, y)
+}
+
+// PlaceStringOneByOne place CurText into screen one by one
+func PlaceStringOneByOne(str string) string {
 	if len([]rune(str)) == 0 {
 		return str
 	}
@@ -79,7 +85,7 @@ func PlaceChar(str string) string {
 		}
 	case "#":
 		str = "POKé" + string(runes[1:])
-		return PlaceChar(str)
+		return PlaceStringOneByOne(str)
 	case "\\":
 		switch string(runes[1]) {
 		case "n":
@@ -110,22 +116,25 @@ func PlaceChar(str string) string {
 	default:
 		if IsCorrectChar(c) {
 			x, y := Caret()
-			placeChar(c, x, y, true)
+			placeCharNext(c, x, y)
 		}
 		str = string(runes[1:])
 	}
 	return str
 }
 
-func placeChar(char string, x, y util.Tile, next bool) {
+// PlaceChar place char
+func PlaceChar(char string, x, y util.Tile) {
 	font, ok := fontmap[char]
 	if !ok {
 		return
 	}
 	util.DrawImage(font, x, y)
-	if next {
-		Next()
-	}
+}
+
+func placeCharNext(char string, x, y util.Tile) {
+	PlaceChar(char, x, y)
+	Next()
 }
 
 func placeNext() {
@@ -145,7 +154,7 @@ func placePara() bool {
 func clearScreenArea() {
 	for h := 13; h <= 16; h++ {
 		for w := 1; w < 19; w++ {
-			placeChar(" ", w, h, false)
+			PlaceChar(" ", w, h)
 		}
 	}
 }
@@ -194,7 +203,7 @@ func ScrollTextUpOneLine() {
 	util.DrawImage(texts, 1, 13)
 	store.TileMap, _ = ebiten.NewImageFromImage(store.TileMap, ebiten.FilterDefault)
 	for w := 1; w < 19; w++ {
-		placeChar(" ", w, 16, false)
+		PlaceChar(" ", w, 16)
 	}
 	store.DelayFrames = 5
 	InScroll = !InScroll
@@ -202,7 +211,7 @@ func ScrollTextUpOneLine() {
 }
 
 func placePrompt() {
-	placeChar("▼", 18, 16, false)
+	PlaceChar("▼", 18, 16)
 }
 func placePage() {}
 func placeDex()  {}

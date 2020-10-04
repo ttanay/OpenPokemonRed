@@ -1,28 +1,41 @@
 package store
 
-import "github.com/hajimehoshi/ebiten"
+import (
+	"github.com/hajimehoshi/ebiten"
+)
 
 // DelayFrames VBlank以外を拒否
 var DelayFrames uint
 
 // FrameCounter VBlankごとにデクリメント
-// 文字の速さの制御などで利用
+// used to control letter print speed
 var FrameCounter uint = 0
 
+// DecFrameCounter decrement FrameCounter
+// this function is called at every vBlank
 func DecFrameCounter() {
 	if FrameCounter > 0 {
 		FrameCounter--
 	}
 }
 
-var PlayerName = "NINTEN"
-var RivalName = "SONY"
+var PlayerName, RivalName = "NINTEN", "SONY"
 
 // TileMap c3a0
 var TileMap, _ = ebiten.NewImage(8*20, 8*18, ebiten.FilterDefault)
 
 // TMName wcf4b
 var TMName = ""
+
+// CD60 :
+// bit 0: `TrainerEngage`でプレイヤーがトレーナーに見つかったか (複数のトレーナーに同時に見つかった時は発見されてないことにする)
+// bit 1: かいりきのアニメーション再生を待機中
+// bit 2: ???
+// bit 3: 普通のPCを使っているか (0ならマサキのパソコンを使用している)
+// bit 4: 1 -> .skipMovingSprites
+// bit 5: 1なら menu で A/Bボタンが押された時にサウンドをならさない
+// bit 6: 一度かいりきの岩を押してみた状態か (you need to push twice before it will move)
+var CD60 byte
 
 // D730 :
 // bit 0: NPCスプライトがスクリプトによって動かされているか(scripted NPC)
