@@ -1,6 +1,7 @@
 package game
 
 import (
+	"pokered/pkg/audio"
 	"pokered/pkg/joypad"
 	"pokered/pkg/store"
 
@@ -37,6 +38,14 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func setup() {
 }
 
+func debug(g *Game, frame int) {
+	if frame >= 0 && int(g.frame) != frame {
+		return
+	}
+	{
+	}
+}
+
 func exec() {
 	joypad.ReadJoypad()
 	if store.DelayFrames > 0 {
@@ -56,4 +65,5 @@ func exec() {
 func vBlank() {
 	joypad.ReadJoypad()
 	store.DecFrameCounter()
+	audio.FadeOutAudio()
 }
