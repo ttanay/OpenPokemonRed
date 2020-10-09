@@ -5,6 +5,7 @@ import (
 	"pokered/pkg/joypad"
 	"pokered/pkg/store"
 	"pokered/pkg/util"
+	"sort"
 )
 
 const (
@@ -15,28 +16,8 @@ const (
 	CancelledMenu
 )
 
-type Menu interface {
-	Z() uint
-	Top() (util.Tile, util.Tile)
-	Len() int
-	Wrap() bool
-	Current() uint
-	SetCurrent(uint)
-}
-
-// CurMenu get current handled menu
-func CurMenu() Menu {
-	z := MaxZIndex()
-	for _, s := range CurSelectMenus {
-		if s.z == z {
-			return s
-		}
-	}
-	if CurListMenu.z == z {
-		return &CurListMenu
-	}
-	return nil
-}
+// Cancel menu cancel
+const Cancel = "CANCEL"
 
 var downArrowBlinkCnt = 6 * 10
 
@@ -57,42 +38,42 @@ func MaxZIndex() uint {
 	return selectZ
 }
 
-// HandleMenuInput メニューでのキー入力に対処するハンドラ
-func HandleMenuInput() joypad.Input {
-	PlaceCursor()
-	store.DelayFrames = 3
-	// TODO: AnimatePartyMon
+func VBlank() {
+	listZ, done := CurListMenu.z, false
+	sort.Sort(CurSelectMenus)
 
-	joypad.JoypadLowSensitivity()
-	if !joypad.Joy5.Any() {
-		return joypad.Input{} // TODO: blink
+	newCurSelectMenus := []*SelectMenu{}
+	for _, m := range CurSelectMenus {
+		if m.z == 0 {
+			continue
+		}
+
+		if listZ > 0 && listZ < m.z {
+			util.DrawImage(store.TileMap, CurListMenu.image, 0, 0)
+			done = true
+		}
+		util.DrawImage(store.TileMap, m.image, 0, 0)
+		newCurSelectMenus = append(newCurSelectMenus, m)
 	}
-
-	m := CurMenu()
-	return handleMenuInput(m)
+	if !done && CurListMenu.z > 0 {
+		util.DrawImage(store.TileMap, CurListMenu.image, 0, 0)
+	}
+	CurSelectMenus = newCurSelectMenus
 }
 
-func handleMenuInput(m Menu) joypad.Input {
-	maxItem := uint(m.Len() - 1)
-	switch m.(type) {
-	case *ListMenu:
-		if maxItem > 2 {
-			maxItem = 2
-		}
-	}
-
+func handleMenuInput(current, maxItem uint, wrap bool) uint {
 	switch {
 	case joypad.Joy5.Up:
-		if m.Current() > 0 {
-			m.SetCurrent(m.Current() - 1)
-		} else if m.Wrap() {
-			m.SetCurrent(maxItem)
+		if current > 0 {
+			return current - 1
+		} else if wrap {
+			return maxItem
 		}
 	case joypad.Joy5.Down:
-		if m.Current() < maxItem {
-			m.SetCurrent(m.Current() + 1)
-		} else if m.Wrap() {
-			m.SetCurrent(0)
+		if current < maxItem {
+			return current + 1
+		} else if wrap {
+			return 0
 		}
 	}
 
@@ -101,5 +82,5 @@ func handleMenuInput(m Menu) joypad.Input {
 			audio.PlaySound(audio.SFX_PRESS_AB)
 		}
 	}
-	return joypad.Joy5
+	return current
 }

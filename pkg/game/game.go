@@ -3,10 +3,16 @@ package game
 import (
 	"pokered/pkg/audio"
 	"pokered/pkg/joypad"
+	"pokered/pkg/menu"
+	"pokered/pkg/sprite"
 	"pokered/pkg/store"
+	"pokered/pkg/text"
+	"pokered/pkg/util"
 
 	"github.com/hajimehoshi/ebiten"
 )
+
+var player = store.SpriteData[0]
 
 // Game implements ebiten.Game interface.
 type Game struct {
@@ -18,6 +24,8 @@ func (g *Game) Update(screen *ebiten.Image) error {
 	if g.frame == 0 {
 		setup()
 	}
+	util.BlackScreen()
+	// debug(g, 10)
 	exec()
 	vBlank()
 	g.frame++
@@ -36,6 +44,9 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func setup() {
+	sprite.InitPlayer(sprite.Normal)
+	sprite.AddSprite("sailor", 2, 2, [2]byte{0xff, 0xff})
+	player = store.SpriteData[0]
 }
 
 func debug(g *Game, frame int) {
@@ -47,7 +58,6 @@ func debug(g *Game, frame int) {
 }
 
 func exec() {
-	joypad.ReadJoypad()
 	if store.DelayFrames > 0 {
 		store.DelayFrames--
 		return
@@ -55,10 +65,8 @@ func exec() {
 	switch m := mode(); m {
 	case Overworld:
 		execOverworld()
-	case Text:
-		execText()
-	case Menu:
-		execMenu()
+	case Script:
+		execScript()
 	}
 }
 
@@ -66,4 +74,7 @@ func vBlank() {
 	joypad.ReadJoypad()
 	store.DecFrameCounter()
 	audio.FadeOutAudio()
+	sprite.VBlank()
+	menu.VBlank()
+	text.VBlank()
 }

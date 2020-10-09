@@ -1,33 +1,25 @@
 package game
 
 import (
-	"pokered/pkg/menu"
-	"pokered/pkg/text"
+	"pokered/pkg/script"
 )
 
 const (
-	Overworld uint = iota
-	Text
-	Menu
+	Script uint = iota
+	Overworld
 )
 
 func mode() uint {
-	if isText() {
-		return Text
+	if isOverworld() {
+		return Overworld
 	}
-	if isMenu() {
-		return Menu
-	}
-	return Overworld
+	return Script
 }
 
-func isText() bool {
-	return len([]rune(text.CurText)) > 0
+func isOverworld() bool {
+	return script.ScriptID() == script.Halt
 }
 
-func isMenu() bool {
-	if menu.ItemQuantity > 0 {
-		return true
-	}
-	return menu.MaxZIndex() > 0
+func execScript() {
+	script.Current()()
 }

@@ -21,6 +21,7 @@ const (
 	forceLeftRight byte = 0x02
 )
 
+// NPCMovementDirections used for scripted NPC
 var NPCMovementDirections []byte
 
 // UpdateNPCSprite update NPC sprite state
@@ -70,7 +71,8 @@ func updateNPCSprite(offset uint) {
 	}
 
 	// sprite status is OK
-	if WalkCounter > 0 {
+	p := store.SpriteData[0]
+	if p != nil && p.WalkCounter > 0 {
 		return
 	}
 
@@ -136,24 +138,44 @@ func updateNPCSprite(offset uint) {
 			}
 		}
 	}
-	tryWalking(offset, direction)
+
+	var deltaX, deltaY int
+	switch direction {
+	case util.Up:
+		deltaX, deltaY = 0, -1
+	case util.Down:
+		deltaX, deltaY = 0, 1
+	case util.Left:
+		deltaX, deltaY = -1, 0
+	case util.Right:
+		deltaX, deltaY = 1, 0
+	}
+
+	tryWalking(offset, direction, deltaX, deltaY)
 }
 
 // tryWalking UpdateNPCSprite から呼び出される
-func tryWalking(offset uint, direction util.Direction) bool {
+func tryWalking(offset uint, direction util.Direction, deltaX, deltaY int) bool {
+	s := store.SpriteData[offset]
+	s.Direction = direction
+
+	if collisionCheckForNPC(offset) {
+		return false
+	}
+
+	s.WalkCounter = 16
+	s.DeltaX, s.DeltaY = deltaX, deltaY
+
+	s.MapXCoord += deltaX
+	s.MapYCoord += deltaY
+
+	s.MovmentStatus = Movement
 	return true
 }
 
 func initializeSpriteStatus(offset uint) {
 	s := store.SpriteData[offset]
 	s.MovmentStatus = OK
-	s.VRAM.Index = -1
-}
-
-func initializeSpriteScreenPosition(offset uint) {
-	p, s := store.SpriteData[0], store.SpriteData[offset]
-	s.ScreenXPixel = ((s.MapXCoord - p.MapXCoord) * 16) - 4
-	s.ScreenYPixel = ((s.MapYCoord - p.MapYCoord) * 16) - 4
 }
 
 func checkSpriteAvailability(offset uint) bool {
@@ -161,24 +183,17 @@ func checkSpriteAvailability(offset uint) bool {
 	// TODO: IsObjectHidden
 
 	// disable sprite when it is out of screen
-	if s.MovementBytes[0] >= 0xfe {
-		p := store.SpriteData[0]
-		tooLeft := p.MapXCoord > s.MapXCoord
-		tooRight := s.MapXCoord > p.MapXCoord+9
-		tooUp := p.MapYCoord > s.MapYCoord
-		tooDown := s.MapYCoord > p.MapYCoord+8
+	if s.MovementBytes[0] >= walk {
+		tooLeft := s.ScreenXPixel < 0
+		tooRight := s.ScreenXPixel > 160
+		tooUp := s.ScreenYPixel > 144
+		tooDown := s.ScreenYPixel < 0
 		if tooLeft || tooRight || tooUp || tooDown {
 			DisableSprite(offset)
 			return false
 		}
+		UpdateSpriteImage(offset)
 	}
-
-	// if player is in walk, disable sprite
-	if WalkCounter > 0 {
-		return false
-	}
-
-	UpdateSpriteImage(offset)
 	return true
 }
 
@@ -189,6 +204,9 @@ func updateSpriteMovementDelay(offset uint) {
 	switch movementByte1 {
 	case 0xfe, 0xff:
 		s.Delay--
+		if s.Delay == 0 {
+			s.MovmentStatus = OK
+		}
 	default:
 		s.Delay = 0
 		s.MovmentStatus = OK
@@ -202,8 +220,12 @@ func updateSpriteInWalkingAnimation(offset uint) {
 	s.ScreenXPixel += s.DeltaX
 	s.ScreenYPixel += s.DeltaY
 
-	s.WalkAnimationCounter--
-	if s.WalkAnimationCounter != 0 {
+	s.WalkCounter--
+	s.AnimationFrame++
+	if s.AnimationCounter() == 4 {
+		s.AnimationFrame = 0
+	}
+	if s.WalkCounter != 0 {
 		return
 	}
 
@@ -212,7 +234,7 @@ func updateSpriteInWalkingAnimation(offset uint) {
 		return
 	}
 
-	s.Delay = uint(util.Random() & 0x7f)
+	s.Delay = uint(util.Random())
 	s.MovmentStatus = Delay
 	s.DeltaX, s.DeltaY = 0, 0
 }
@@ -220,7 +242,6 @@ func updateSpriteInWalkingAnimation(offset uint) {
 func notYetMoving(offset uint) {
 	s := store.SpriteData[offset]
 	s.AnimationFrame %= 4
-	UpdateSpriteImage(offset)
 }
 
 // make NPC face player when player talk to NPC
@@ -263,4 +284,46 @@ func advanceScriptedNPCAnimFrameCounter(offset uint) {
 	if s.AnimationFrame>>2 == 4 {
 		s.AnimationFrame = 0
 	}
+}
+
+// collisionCheckForNPC check if collision occurs in npc moving ahead
+// ref: CanWalkOntoTile
+func collisionCheckForNPC(offset uint) bool {
+	collision := false
+	npc := store.SpriteData[offset]
+	if npc == nil || npc.ID == 0 {
+		return false
+	}
+	for o, s := range store.SpriteData {
+		if o == int(offset) {
+			continue
+		}
+		if s == nil || s.ID == 0 {
+			break
+		}
+
+		switch npc.Direction {
+		case util.Up:
+			if npc.MapXCoord == s.MapXCoord && npc.MapYCoord-1 == s.MapYCoord {
+				collision = true
+			}
+		case util.Down:
+			if npc.MapXCoord == s.MapXCoord && npc.MapYCoord+1 == s.MapYCoord {
+				collision = true
+			}
+		case util.Left:
+			if npc.MapXCoord-1 == s.MapXCoord && npc.MapYCoord == s.MapYCoord {
+				collision = true
+			}
+		case util.Right:
+			if npc.MapXCoord+1 == s.MapXCoord && npc.MapYCoord == s.MapYCoord {
+				collision = true
+			}
+		}
+
+		if collision {
+			break
+		}
+	}
+	return collision
 }
