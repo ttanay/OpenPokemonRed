@@ -1,14 +1,14 @@
 package audio
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/hajimehoshi/ebiten/audio"
 	"github.com/hajimehoshi/ebiten/audio/wav"
-	"github.com/rakyll/statik/fs"
 
 	_ "pokered/pkg/data/statik"
+	"pokered/pkg/store"
+	"pokered/pkg/util"
 )
 
 const (
@@ -31,19 +31,23 @@ var soundMap = newSoundMap()
 
 func newSoundMap() map[uint]*WAV {
 	soundMap := map[uint]*WAV{}
-	FS, _ := fs.New()
 
-	soundMap[SFX_TINK] = newWav(FS, "/tink.wav")
-	soundMap[SFX_START_MENU] = newWav(FS, "/start_menu.wav")
-	soundMap[SFX_PRESS_AB] = newWav(FS, "/press_ab.wav")
-	soundMap[SFX_COLLISION] = newWav(FS, "/collision.wav")
+	soundMap[SFX_TINK] = newWav(store.FS, "/tink.wav")
+	soundMap[SFX_START_MENU] = newWav(store.FS, "/start_menu.wav")
+	soundMap[SFX_PRESS_AB] = newWav(store.FS, "/press_ab.wav")
+	soundMap[SFX_COLLISION] = newWav(store.FS, "/collision.wav")
 
 	return soundMap
 }
 
 func newWav(fs http.FileSystem, path string) *WAV {
 	w := &WAV{}
-	f, _ := fs.Open(path)
+	f, err := fs.Open(path)
+	if err != nil {
+		util.NotFoundFileError(path)
+		return w
+	}
+
 	defer f.Close()
 	w.stream, _ = wav.Decode(audioContext, f)
 	w.player, _ = audio.NewPlayer(audioContext, w.stream)
@@ -54,7 +58,7 @@ func newWav(fs http.FileSystem, path string) *WAV {
 func PlaySound(soundID uint) {
 	sound, ok := soundMap[soundID]
 	if !ok {
-		fmt.Println("this sfx is not registered")
+		util.NotRegisteredError("soundMap", soundID)
 		return
 	}
 	if sound.player.IsPlaying() {

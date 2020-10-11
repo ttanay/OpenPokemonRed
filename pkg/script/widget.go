@@ -1,15 +1,14 @@
 package script
 
 import (
-	"pokered/pkg/data/txt"
+	"pokered/pkg/joypad"
 	"pokered/pkg/menu"
 	"pokered/pkg/store"
-	"pokered/pkg/text"
 	"pokered/pkg/widget"
 )
 
 func widgetStartMenu() {
-	SetScriptID(WidgetStartMenu2)
+	SetID(WidgetStartMenu2)
 	widget.DrawStartMenu()
 }
 
@@ -21,17 +20,18 @@ func widgetStartMenu2() {
 		switch m.Item() {
 		case "EXIT":
 			m.Close()
-			SetScriptID(Halt)
+			SetID(Halt)
 		case "ITEM":
-			SetScriptID(WidgetBag)
+			SetID(WidgetBag)
 			menu.NewListMenuID(menu.ItemListMenu, store.BagItems)
 		case "RED":
-			SetScriptID(ExecText)
-			text.PrintText(text.Image, txt.AgathaBeforeBattleText)
+			m.Close()
+			SetID(WidgetTrainerCard)
+			widget.DrawTrainerCard()
 		}
 	case pressed.B:
 		m.Close()
-		SetScriptID(Halt)
+		SetID(Halt)
 	}
 }
 
@@ -42,10 +42,39 @@ func widgetBag() {
 		switch menu.CurListMenu.Item() {
 		case menu.Cancel:
 			menu.CurListMenu.Close()
-			SetScriptID(WidgetStartMenu2)
+			SetID(WidgetStartMenu2)
 		}
 	case pressed.B:
 		menu.CurListMenu.Close()
-		SetScriptID(WidgetStartMenu2)
+		SetID(WidgetStartMenu2)
+	}
+}
+
+func widgetTrainerCard() {
+	if joypad.ABButtonPress() {
+		widget.CloseTrainerCard()
+		SetID(WidgetStartMenu)
+	}
+}
+
+func widgetNamingScreen() {
+	widget.UpdateNameScreen()
+
+	joypad.JoypadLowSensitivity()
+	switch {
+	case joypad.Joy5.Up:
+		widget.SetNameCursor(0, -1)
+	case joypad.Joy5.Down:
+		widget.SetNameCursor(0, 1)
+	case joypad.Joy5.Left:
+		widget.SetNameCursor(-1, 0)
+	case joypad.Joy5.Right:
+		widget.SetNameCursor(1, 0)
+	case joypad.Joy5.Select:
+		widget.ToggleCase()
+	case joypad.Joy5.A:
+		widget.NextChar()
+	case joypad.Joy5.B:
+		widget.EraseChar()
 	}
 }

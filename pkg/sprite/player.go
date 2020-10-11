@@ -8,13 +8,10 @@ import (
 	"pokered/pkg/util"
 
 	"github.com/hajimehoshi/ebiten"
-	"github.com/rakyll/statik/fs"
 )
 
 // InitPlayer initialize player sprite
 func InitPlayer(state uint) {
-	FS, _ := fs.New()
-
 	imgs := make([]*ebiten.Image, 10)
 	for i := 0; i < 10; i++ {
 		name := "red"
@@ -25,14 +22,18 @@ func InitPlayer(state uint) {
 			name = "seel"
 		}
 
-		f, _ := FS.Open(fmt.Sprintf("/%s_%d.png", name, i))
+		path := fmt.Sprintf("/%s_%d.png", name, i)
+		f, err := store.FS.Open(path)
+		if err != nil {
+			util.NotFoundFileError(path)
+		}
 		defer f.Close()
+
 		img, _ := png.Decode(f)
 		imgs[i], _ = ebiten.NewImageFromImage(img, ebiten.FilterDefault)
 	}
 
 	s := &store.Sprite{
-		ID:           1,
 		ScreenXPixel: 16 * util.PlayerX,
 		ScreenYPixel: 16*util.PlayerY - 4,
 		MapXCoord:    util.PlayerX,
@@ -48,11 +49,9 @@ func InitPlayer(state uint) {
 // ChangePlayerSprite change player sprite image
 func ChangePlayerSprite(state uint) {
 	p := store.SpriteData[0]
-	if p == nil || p.ID == 0 {
+	if store.IsInvalidSprite(0) {
 		return
 	}
-
-	FS, _ := fs.New()
 
 	imgs := make([]*ebiten.Image, 10)
 	for i := 0; i < 10; i++ {
@@ -64,8 +63,13 @@ func ChangePlayerSprite(state uint) {
 			name = "seel"
 		}
 
-		f, _ := FS.Open(fmt.Sprintf("/%s_%d.png", name, i))
+		path := fmt.Sprintf("/%s_%d.png", name, i)
+		f, err := store.FS.Open(path)
+		if err != nil {
+			util.NotFoundFileError(path)
+		}
 		defer f.Close()
+
 		img, _ := png.Decode(f)
 		imgs[i], _ = ebiten.NewImageFromImage(img, ebiten.FilterDefault)
 	}
@@ -77,7 +81,7 @@ func ChangePlayerSprite(state uint) {
 // if player is starting moving, change direction and increment anim counter
 func UpdatePlayerSprite() {
 	p := store.SpriteData[0]
-	if p == nil || p.ID == 0 {
+	if store.IsInvalidSprite(0) {
 		return
 	}
 
@@ -87,13 +91,13 @@ func UpdatePlayerSprite() {
 			p.AnimationFrame = 0
 		}
 	}
-	p.VRAM.Index = int(p.Direction + (p.AnimationFrame >> 2))
+	p.VRAM.Index = int(p.Direction + p.AnimationCounter())
 }
 
 // AdvancePlayerSprite advance player's walk by a frame
 func AdvancePlayerSprite() {
 	p := store.SpriteData[0]
-	if p == nil || p.ID == 0 {
+	if store.IsInvalidSprite(0) {
 		return
 	}
 	p.WalkCounter--
@@ -110,7 +114,7 @@ func AdvancePlayerSprite() {
 		if i == 0 {
 			continue
 		}
-		if s == nil || s.ID == 0 {
+		if store.IsInvalidSprite(uint(i)) {
 			return
 		}
 		s.ScreenXPixel -= p.DeltaX
@@ -122,14 +126,14 @@ func AdvancePlayerSprite() {
 func CollisionCheckForPlayer() bool {
 	collision := false
 	p := store.SpriteData[0]
-	if p == nil || p.ID == 0 {
+	if store.IsInvalidSprite(0) {
 		return false
 	}
 	for offset, s := range store.SpriteData {
 		if offset == 0 {
 			continue
 		}
-		if s == nil || s.ID == 0 {
+		if store.IsInvalidSprite(uint(offset)) {
 			break
 		}
 

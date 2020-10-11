@@ -8,6 +8,7 @@ import (
 	"pokered/pkg/store"
 	"pokered/pkg/text"
 	"pokered/pkg/util"
+	"pokered/pkg/widget"
 
 	"github.com/hajimehoshi/ebiten"
 )
@@ -24,11 +25,16 @@ func (g *Game) Update(screen *ebiten.Image) error {
 	if g.frame == 0 {
 		setup()
 	}
-	util.BlackScreen()
+	util.BlackScreen(store.TileMap)
 	// debug(g, 10)
 	exec()
 	vBlank()
 	g.frame++
+
+	if g.frame%60 == 0 {
+		second()
+	}
+
 	return nil
 }
 
@@ -76,5 +82,8 @@ func vBlank() {
 	audio.FadeOutAudio()
 	sprite.VBlank()
 	menu.VBlank()
+	widget.VBlank()
 	text.VBlank()
 }
+
+func second() {}

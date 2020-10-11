@@ -118,6 +118,16 @@ func PlaceStringOneByOne(target *ebiten.Image, str string) string {
 		default:
 			str = string(runes[1:])
 		}
+	case "'":
+		switch string(runes[1]) {
+		case "d", "l", "s", "t", "v":
+			c += string(runes[1])
+			if IsCorrectChar(c) {
+				x, y := Caret()
+				placeCharNext(target, c, x, y)
+			}
+			str = string(runes[2:])
+		}
 	default:
 		if IsCorrectChar(c) {
 			x, y := Caret()
@@ -180,9 +190,7 @@ func manualTextScroll() bool {
 // WaitForTextScrollButtonPress wait for AB button press
 func WaitForTextScrollButtonPress() bool {
 	handleDownArrowBlinkTiming()
-	joypad.JoypadLowSensitivity()
-	pressed := joypad.Joy5.A || joypad.Joy5.B
-	return pressed
+	return joypad.ABButtonPress()
 }
 
 func handleDownArrowBlinkTiming() {

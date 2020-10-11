@@ -1,8 +1,14 @@
 package store
 
 import (
+	_ "pokered/pkg/data/statik"
+
 	"github.com/hajimehoshi/ebiten"
+	"github.com/rakyll/statik/fs"
 )
+
+// FS statik filesystem
+var FS, _ = fs.New()
 
 var SCX, SCY int
 
@@ -21,7 +27,12 @@ func DecFrameCounter() {
 	}
 }
 
-var PlayerName, RivalName = "NINTEN", "SONY"
+var Player = struct {
+	Name  string
+	Money uint
+	Time  uint
+}{"NINTEN", 0, 0}
+var RivalName = "SONY"
 
 // TileMap c3a0
 var TileMap, _ = ebiten.NewImage(8*20, 8*18, ebiten.FilterDefault)
@@ -66,3 +77,6 @@ var D730 byte
 // BagItems items in bag
 // [A@1, B@2, ...]
 var BagItems = []string{}
+
+// EventMap event ID -> flag
+var EventMap = map[uint]bool{}

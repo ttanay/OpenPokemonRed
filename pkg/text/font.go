@@ -5,9 +5,10 @@ import (
 	"image/png"
 
 	"github.com/hajimehoshi/ebiten"
-	"github.com/rakyll/statik/fs"
 
 	_ "pokered/pkg/data/statik"
+	"pokered/pkg/store"
+	"pokered/pkg/util"
 )
 
 // CharCode number for char
@@ -249,6 +250,8 @@ var charmap = map[string]CharCode{
 	"'v": 0xBF,
 
 	"'": 0xE0,
+	"袋": 0xE1,
+	"怪": 0xE2,
 
 	"-":  0xE3,
 	"'r": 0xE4,
@@ -287,18 +290,23 @@ var fontmap map[string]*ebiten.Image = newFontmap()
 // IsCorrectChar check char is correct
 func IsCorrectChar(char string) bool {
 	_, ok := fontmap[char]
+	if !ok {
+		util.NotRegisteredError("fontmap", char)
+	}
 	return ok
 }
 
 func newFontmap() map[string]*ebiten.Image {
-	FS, _ := fs.New()
 	fontmap := map[string]*ebiten.Image{}
 	for char, charCode := range charmap {
-		f, err := FS.Open(fmt.Sprintf("/%d.png", charCode))
+		path := fmt.Sprintf("/%d.png", charCode)
+		f, err := store.FS.Open(path)
 		if err != nil {
+			// NOTE: NotFoundFileError isn't needed
 			continue
 		}
 		defer f.Close()
+
 		img, _ := png.Decode(f)
 		fontmap[char], _ = ebiten.NewImageFromImage(img, ebiten.FilterDefault)
 	}

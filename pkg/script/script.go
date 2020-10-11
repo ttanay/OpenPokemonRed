@@ -1,10 +1,10 @@
 package script
 
 import (
-	"fmt"
 	"pokered/pkg/joypad"
 	"pokered/pkg/store"
 	"pokered/pkg/text"
+	"pokered/pkg/util"
 )
 
 const (
@@ -13,13 +13,17 @@ const (
 	WidgetStartMenu
 	WidgetStartMenu2
 	WidgetBag
+	WidgetTrainerCard
+	WidgetNamingScreen
 )
 
-// ScriptID current script ID
 var scriptID = Halt
 
-func ScriptID() uint      { return scriptID }
-func SetScriptID(id uint) { scriptID = id }
+// ID current script ID
+func ID() uint { return scriptID }
+
+// SetID change script ID
+func SetID(id uint) { scriptID = id }
 
 // ScriptMap script ID -> script
 var scriptMap = newScriptMap()
@@ -31,13 +35,16 @@ func newScriptMap() map[uint]func() {
 	result[WidgetStartMenu] = widgetStartMenu
 	result[WidgetStartMenu2] = widgetStartMenu2
 	result[WidgetBag] = widgetBag
+	result[WidgetTrainerCard] = widgetTrainerCard
+	result[WidgetNamingScreen] = widgetNamingScreen
 	return result
 }
 
+// Current return current script
 func Current() func() {
 	s, ok := scriptMap[scriptID]
 	if !ok {
-		fmt.Println("this scriptID is not registered")
+		util.NotRegisteredError("scriptMap", scriptID)
 		return halt
 	}
 	return s
@@ -50,6 +57,7 @@ func execText() {
 		text.ScrollTextUpOneLine(text.Image)
 		return
 	}
+
 	if store.FrameCounter > 0 {
 		joypad.Joypad()
 		if joypad.JoyHeld.A || joypad.JoyHeld.B {
@@ -63,8 +71,9 @@ func execText() {
 		}
 		return
 	}
+
 	text.CurText = text.PlaceStringOneByOne(text.Image, text.CurText)
 	if len([]rune(text.CurText)) == 0 {
-		SetScriptID(Halt)
+		SetID(Halt)
 	}
 }

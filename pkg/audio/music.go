@@ -7,9 +7,10 @@ import (
 
 	"github.com/hajimehoshi/ebiten/audio"
 	"github.com/hajimehoshi/ebiten/audio/vorbis"
-	"github.com/rakyll/statik/fs"
 
 	_ "pokered/pkg/data/statik"
+	"pokered/pkg/store"
+	"pokered/pkg/util"
 )
 
 const (
@@ -25,14 +26,15 @@ type Music struct {
 
 // MusicMap MusicID -> Music
 var MusicMap = newMusicMap()
+
+// CurMusic music data played now
 var CurMusic *audio.Player
 
 func newMusicMap() map[int]Music {
 	musicMap := map[int]Music{}
-	FS, _ := fs.New()
-	musicMap[MUSIC_PALLET_TOWN] = newMusic(FS, "/1-02 Pallet Town Theme.ogg", "0:32.167")
-	musicMap[MUSIC_MEET_PROF_OAK] = newMusic(FS, "/1-03 Professor Oak.ogg", "0:13.560")
-	musicMap[MUSIC_FINAL_BATTLE] = newMusic(FS, "/1-43 Final Battle! (Rival).ogg", "1:15.120")
+	musicMap[MUSIC_PALLET_TOWN] = newMusic(store.FS, "/1-02 Pallet Town Theme.ogg", "0:32.167")
+	musicMap[MUSIC_MEET_PROF_OAK] = newMusic(store.FS, "/1-03 Professor Oak.ogg", "0:13.560")
+	musicMap[MUSIC_FINAL_BATTLE] = newMusic(store.FS, "/1-43 Final Battle! (Rival).ogg", "1:15.120")
 	return musicMap
 }
 
@@ -56,9 +58,11 @@ func parseTime(t string) float64 {
 func newMusic(fs http.FileSystem, path string, intro string) Music {
 	f, err := fs.Open(path)
 	if err != nil {
+		util.NotFoundFileError(path)
 		return Music{}
 	}
 	defer f.Close()
+
 	stream, err := vorbis.Decode(audioContext, f)
 	if err != nil {
 		return Music{}
@@ -74,7 +78,11 @@ func PlayMusic(id int) {
 		}
 		return
 	}
-	m := MusicMap[id]
+	m, ok := MusicMap[id]
+	if !ok {
+		util.NotRegisteredError("MusicMap", id)
+		return
+	}
 	intro := int64(m.intro * 4 * sampleRate)
 	l := audio.NewInfiniteLoopWithIntro(m.Ogg, intro, m.Ogg.Length())
 	p, _ := audio.NewPlayer(audioContext, l)
