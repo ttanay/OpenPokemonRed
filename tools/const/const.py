@@ -1,4 +1,4 @@
-f = open('event.txt', 'r')
+f = open('move.txt', 'r')
 
 output = ""
 constlist = f.readlines()
