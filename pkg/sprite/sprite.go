@@ -3,9 +3,11 @@ package sprite
 import (
 	"fmt"
 	"image/png"
+	"pokered/pkg/data/sprdata"
 	"pokered/pkg/joypad"
 	"pokered/pkg/store"
 	"pokered/pkg/util"
+	"pokered/pkg/world"
 
 	"github.com/hajimehoshi/ebiten"
 )
@@ -25,10 +27,21 @@ const (
 	Seel
 )
 
+func InitMapSprites() {
+	for i := 1; i < 16; i++ {
+		store.SpriteData[i] = nil
+	}
+	sprites := world.CurWorld.Object.Sprites
+	for _, s := range sprites {
+		addSprite(s.ID, s.XCoord, s.YCoord, s.MovementBytes)
+	}
+}
+
 // AddSprite add sprite into SpriteData
-func AddSprite(name string, x, y util.Coord, movementBytes [2]byte) {
+func addSprite(id sprdata.SpriteID, x, y util.Coord, movementBytes [2]byte) {
 	imgs := make([]*ebiten.Image, 10)
 	for i := 0; i < 10; i++ {
+		name := id.String()
 		path := fmt.Sprintf("/%s_%d.png", name, i)
 		f, err := store.FS.Open(path)
 		if err != nil {
@@ -41,10 +54,11 @@ func AddSprite(name string, x, y util.Coord, movementBytes [2]byte) {
 		imgs[i], _ = ebiten.NewImageFromImage(img, ebiten.FilterDefault)
 	}
 
+	p := store.SpriteData[0]
 	n := NumSprites()
 	s := &store.Sprite{
-		ScreenXPixel:  16 * x,
-		ScreenYPixel:  16*y - 4,
+		ScreenXPixel:  16 * (x - p.MapXCoord + 4),
+		ScreenYPixel:  16*(y+4-p.MapYCoord) - 4,
 		MapXCoord:     x,
 		MapYCoord:     y,
 		MovementBytes: movementBytes,
@@ -86,7 +100,7 @@ func UpdateSpriteImage(offset uint) {
 	if s == nil {
 		return
 	}
-	length := len(s.VRAM.Images)
+	length := s.VRAM.Length()
 	if length == 1 {
 		s.VRAM.Index = 0
 		return
@@ -161,7 +175,7 @@ func DisableSprite(offset uint) {
 // set wNPCMovementDirections
 func MoveSpriteForcely(offset uint, movement []byte) {
 	copy(NPCMovementDirections, movement)
-	util.SetBit(store.D730, 0)
+	util.SetBit(&store.D730, 0)
 	joypad.JoyIgnore = joypad.ByteToInput(0xff)
 }
 
@@ -174,12 +188,16 @@ func drawSprite(offset uint) {
 
 // VBlank script executed in VBlank
 func VBlank() {
+	if !world.CurWorld.Object.Initialized {
+		InitMapSprites()
+		world.CurWorld.Object.Initialized = true
+	}
 	for i, s := range store.SpriteData {
 		if store.IsInvalidSprite(uint(i)) {
 			break
 		}
 		if s.VRAM.Index < 0 {
-			return
+			continue
 		}
 		drawSprite(uint(i))
 	}

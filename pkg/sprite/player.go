@@ -5,6 +5,8 @@ import (
 	"image/png"
 	"pokered/pkg/audio"
 	"pokered/pkg/data/tilecoll"
+	"pokered/pkg/data/tileset"
+	"pokered/pkg/joypad"
 	"pokered/pkg/store"
 	"pokered/pkg/util"
 	"pokered/pkg/world"
@@ -12,8 +14,10 @@ import (
 	"github.com/hajimehoshi/ebiten"
 )
 
+var ledgeJumpCounter byte
+
 // InitPlayer initialize player sprite
-func InitPlayer(state uint) {
+func InitPlayer(state uint, x, y int) {
 	imgs := make([]*ebiten.Image, 10)
 	for i := 0; i < 10; i++ {
 		name := "red"
@@ -36,10 +40,10 @@ func InitPlayer(state uint) {
 	}
 
 	s := &store.Sprite{
-		ScreenXPixel: 16 * util.PlayerX,
-		ScreenYPixel: 16*util.PlayerY - 4,
-		MapXCoord:    util.PlayerX,
-		MapYCoord:    util.PlayerY,
+		ScreenXPixel: 16 * 4,
+		ScreenYPixel: 16*4 - 4,
+		MapXCoord:    x,
+		MapYCoord:    y,
 		VRAM: store.SpriteImage{
 			Index:  1,
 			Images: imgs,
@@ -103,14 +107,14 @@ func AdvancePlayerSprite() {
 		return
 	}
 	p.WalkCounter--
+	if p.WalkCounter < 0 {
+		p.WalkCounter = 0
+	}
 	if p.WalkCounter == 0 {
 		p.RightHand = !p.RightHand
 		p.MapXCoord += p.DeltaX
 		p.MapYCoord += p.DeltaY
 	}
-
-	store.SCX += p.DeltaX
-	store.SCY += p.DeltaY
 
 	for i, s := range store.SpriteData {
 		if i == 0 {
@@ -127,8 +131,18 @@ func AdvancePlayerSprite() {
 // CollisionCheckForPlayer check if collision occurs in player moving ahead
 func CollisionCheckForPlayer() bool {
 	collision := false
+	defer func() {
+		if collision {
+			audio.PlaySound(audio.SFX_COLLISION)
+		}
+	}()
+
 	p := store.SpriteData[0]
 	if store.IsInvalidSprite(0) {
+		return false
+	}
+
+	if util.ReadBit(store.D736, 6) {
 		return false
 	}
 
@@ -160,17 +174,87 @@ func CollisionCheckForPlayer() bool {
 		}
 
 		if collision {
-			break
+			return collision
 		}
 	}
 
-	tilesetID, tileID := world.FrontTileID()
-	if !util.Contains(tilecoll.Get(tilesetID), byte(tileID)) {
-		collision = true
+	if HandleLedges() {
+		return false
 	}
 
-	if collision {
-		audio.PlaySound(audio.SFX_COLLISION)
+	tilesetID, frontTileID := world.FrontTileID(p.MapXCoord, p.MapYCoord, p.Direction)
+	if frontTileID == world.NoPassable || !util.Contains(tilecoll.Get(tilesetID), byte(frontTileID)) {
+		if frontTileID != world.Passable {
+			collision = true
+			return collision
+		}
+	}
+
+	_, curTileID := world.CurTileID(p.MapXCoord, p.MapYCoord)
+	if tilecoll.IsCollisionPair(tilesetID, byte(curTileID), byte(frontTileID), false) {
+		collision = true
+		return collision
 	}
 	return collision
+}
+
+// HandleLedges 段差飛び降りできるかチェックして、飛び降りれるなら飛び降りる処理(キー入力の強制や飛び降りモーションアニメの再生)を行う
+func HandleLedges() bool {
+	if util.ReadBit(store.D736, 6) {
+		return false
+	}
+
+	if !world.IsCurTileset(tileset.Overworld) {
+		return false
+	}
+
+	result := isJumpingLedge(0)
+	if result {
+		util.SetBit(&store.D736, 6)
+		audio.PlaySound(audio.SFX_LEDGE)
+	}
+	return result
+}
+
+func HandleMidJump() {
+	var jumpingYScreenPixel = [...]int{
+		0x38, 0x36, 0x34, 0x32, 0x31, 0x30, 0x30, 0x30, 0x31, 0x32, 0x33, 0x34, 0x36, 0x38, 0x3C, 0x3C,
+	}
+
+	p := store.SpriteData[0]
+	if p == nil {
+		return
+	}
+
+	if ledgeJumpCounter < 32 {
+		p.ScreenYPixel = jumpingYScreenPixel[ledgeJumpCounter/2]
+		ledgeJumpCounter++
+		return
+	}
+
+	// finished jump
+	UpdateSprites()
+	store.DelayFrames = 3
+
+	joypad.JoyHeld, joypad.JoyPressed, joypad.JoyReleased, joypad.JoyIgnore = joypad.Input{}, joypad.Input{}, joypad.Input{}, joypad.Input{}
+	ledgeJumpCounter = 0
+	util.ResBit(&store.D736, 6)
+}
+
+// IsPlayerFacingEdgeOfMap check player faces edge of the current map
+func IsPlayerFacingEdgeOfMap() bool {
+	p := store.SpriteData[0]
+	if store.IsInvalidSprite(0) {
+		return false
+	}
+	return world.FaceEdgeOfMap(p.MapXCoord, p.MapYCoord, p.Direction)
+}
+
+func IsWarpTileInFrontOfPlayer() bool {
+	return false
+}
+
+func PlayerCurTileID() (uint, int) {
+	p := store.SpriteData[0]
+	return world.CurTileID(p.MapXCoord, p.MapYCoord)
 }

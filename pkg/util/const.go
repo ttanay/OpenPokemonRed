@@ -15,6 +15,8 @@ const (
 )
 
 const (
-	PlayerX = 4
-	PlayerY = 4
+	None            byte = 0xff
+	ChangeDirection byte = 0xe0
+	Walk            byte = 0xfe
+	Stay            byte = 0xff
 )

@@ -1,6 +1,9 @@
 package header
 
-import "pokered/pkg/data/worldmap"
+import (
+	"pokered/pkg/data/worldmap"
+	"pokered/pkg/util"
+)
 
 // Header Map header
 type Header struct {
@@ -14,15 +17,43 @@ type Header struct {
 
 	// Block data
 	blk []byte
+
+	// Map Text data
+	Text []string
+
+	Connections Connections
+}
+
+type Connections struct {
+	North Connection
+	South Connection
+	West  Connection
+	East  Connection
+}
+
+type Connection struct {
+	OK        bool
+	DestMapID int
+	Coords    []uint
 }
 
 // Get Map Header
-func Get(id uint) *Header {
+func Get(id int) *Header {
 	switch id {
 	case worldmap.AGATHAS_ROOM:
 		return AgathasRoom
 	case worldmap.PALLET_TOWN:
 		return PalletTown
+	case worldmap.REDS_HOUSE_1F:
+		return RedsHouse1F
+	case worldmap.REDS_HOUSE_2F:
+		return RedsHouse2F
+	case worldmap.ROUTE_1:
+		return Route1
+	case worldmap.ROUTE_21:
+		return Route21
+	default:
+		util.NotRegisteredError("header.Get", id)
 	}
 	return nil
 }
@@ -33,4 +64,9 @@ func (h *Header) Blk(index int) byte {
 		return 0
 	}
 	return h.blk[index]
+}
+
+// BlkLen get block data length
+func (h *Header) BlkLen() int {
+	return len(h.blk)
 }

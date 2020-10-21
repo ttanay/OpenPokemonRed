@@ -13,6 +13,15 @@ type SpriteImage struct {
 	Images []*ebiten.Image // VRAM: all tile image
 }
 
+func (s *SpriteImage) Length() int {
+	for i := 0; i < len(s.Images); i++ {
+		if s.Images[i] == nil {
+			return i
+		}
+	}
+	return 10
+}
+
 // Sprite data
 type Sprite struct {
 	MovmentStatus              byte // C1x1 if bit7
@@ -23,7 +32,7 @@ type Sprite struct {
 	MapXCoord, MapYCoord       int  // Coord C2x4, C2x5
 	Delay                      uint // C2x8
 	VRAM                       SpriteImage
-	Scripted                   bool
+	Simulated                  []uint
 	MovementBytes              [2]byte // movement byte 1,2
 	DeltaX, DeltaY             int
 	RightHand                  bool // used to walk animation

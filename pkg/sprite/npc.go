@@ -1,14 +1,10 @@
 package sprite
 
 import (
+	"pokered/pkg/data/tilecoll"
 	"pokered/pkg/store"
 	"pokered/pkg/util"
-)
-
-const (
-	changeDirection byte = 0xe0
-	walk            byte = 0xfe
-	stay            byte = 0xff
+	"pokered/pkg/world"
 )
 
 // movement byte 2
@@ -32,7 +28,7 @@ func UpdateNPCSprite(offset uint) {
 		return
 	}
 
-	if s.Scripted {
+	if len(s.Simulated) > 0 {
 		DoScriptedNPCMovement(offset)
 		return
 	}
@@ -78,27 +74,27 @@ func updateNPCSprite(offset uint) {
 
 	var move byte
 	switch s.MovementBytes[0] {
-	case walk, stay:
+	case util.Walk, util.Stay:
 		// take random movement
 		move = util.Random()
 	default:
 		// scripted NPC
 		s.MovementBytes[0]++
 
-		move = byte(stay)
+		move = byte(util.Stay)
 		if int(s.MovementBytes[0]) < len(NPCMovementDirections) {
 			move = NPCMovementDirections[s.MovementBytes[0]]
 		}
 
 		switch move {
-		case changeDirection:
+		case util.ChangeDirection:
 			// TODO: ChangeFacingDirection
-		case stay:
-			s.MovementBytes[0] = stay
-			util.ResBit(store.D730, 0)
+		case util.Stay:
+			s.MovementBytes[0] = util.Stay
+			util.ResBit(&store.D730, 0)
 			// TODO: [wSimulatedJoypadStatesIndex] = 0
 			return
-		case walk:
+		case util.Walk:
 			move = util.Random()
 		}
 	}
@@ -160,6 +156,9 @@ func tryWalking(offset uint, direction util.Direction, deltaX, deltaY int) bool 
 	s.Direction = direction
 
 	if collisionCheckForNPC(offset) {
+		s.Delay = uint(util.Random())
+		s.MovmentStatus = Delay
+		s.DeltaX, s.DeltaY = 0, 0
 		return false
 	}
 
@@ -183,7 +182,7 @@ func checkSpriteAvailability(offset uint) bool {
 	// TODO: IsObjectHidden
 
 	// disable sprite when it is out of screen
-	if s.MovementBytes[0] >= walk {
+	if s.MovementBytes[0] >= util.Walk {
 		tooLeft := s.ScreenXPixel < 0
 		tooRight := s.ScreenXPixel > 160
 		tooUp := s.ScreenYPixel > 144
@@ -295,6 +294,12 @@ func collisionCheckForNPC(offset uint) bool {
 
 	collision := false
 	npc := store.SpriteData[offset]
+
+	// if movement byte 1 is STAY(0xff)
+	if npc.MovementBytes[0] == util.Stay {
+		return true
+	}
+
 	for o, s := range store.SpriteData {
 		if o == int(offset) {
 			continue
@@ -326,5 +331,11 @@ func collisionCheckForNPC(offset uint) bool {
 			break
 		}
 	}
+
+	tilesetID, tileID := world.FrontTileID(npc.MapXCoord, npc.MapYCoord, npc.Direction)
+	if tileID >= 0 && !util.Contains(tilecoll.Get(tilesetID), byte(uint(tileID))) {
+		collision = true
+	}
+
 	return collision
 }

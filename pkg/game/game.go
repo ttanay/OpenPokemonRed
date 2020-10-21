@@ -2,10 +2,9 @@ package game
 
 import (
 	"pokered/pkg/audio"
-	"pokered/pkg/data/tileset"
-	"pokered/pkg/data/worldmap"
 	"pokered/pkg/joypad"
 	"pokered/pkg/menu"
+	pal "pokered/pkg/palette"
 	"pokered/pkg/sprite"
 	"pokered/pkg/store"
 	"pokered/pkg/text"
@@ -16,8 +15,6 @@ import (
 	"github.com/hajimehoshi/ebiten"
 )
 
-var player = store.SpriteData[0]
-
 // Game implements ebiten.Game interface.
 type Game struct {
 	frame uint
@@ -26,7 +23,7 @@ type Game struct {
 // Update proceeds the game state.
 func (g *Game) Update(screen *ebiten.Image) error {
 	if g.frame == 0 {
-		setup()
+		initialize()
 	}
 	util.BlackScreen(store.TileMap)
 	// debug(g, 10)
@@ -43,7 +40,7 @@ func (g *Game) Update(screen *ebiten.Image) error {
 
 // Draw draws the game screen.
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.DrawImage(store.TileMap, nil)
+	screen.DrawImage(pal.Filter(store.TileMap, store.Palette), nil)
 }
 
 // Layout takes the outside size (e.g., the window size) and returns the (logical) screen size.
@@ -51,15 +48,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return 160, 144
 }
-
-func setup() {
-	tileset.InitTilesets()
-	world.LoadWorldData(worldmap.PALLET_TOWN)
-	sprite.InitPlayer(sprite.Normal)
-	sprite.AddSprite("sailor", 2, 2, [2]byte{0xff, 0xff})
-	player = store.SpriteData[0]
-}
-
 func debug(g *Game, frame int) {
 	if frame >= 0 && int(g.frame) != frame {
 		return
@@ -82,10 +70,12 @@ func exec() {
 }
 
 func vBlank() {
+	p := store.SpriteData[0]
+
 	joypad.ReadJoypad()
 	store.DecFrameCounter()
 	audio.FadeOutAudio()
-	world.VBlank()
+	world.VBlank(p.MapXCoord, p.MapYCoord, p.DeltaX, p.DeltaY, p.WalkCounter, p.Direction)
 	sprite.VBlank()
 	menu.VBlank()
 	widget.VBlank()
