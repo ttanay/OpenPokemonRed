@@ -4,11 +4,11 @@ import (
 	"pokered/pkg/audio"
 	"pokered/pkg/joypad"
 	"pokered/pkg/menu"
+	"pokered/pkg/overworld"
 	pal "pokered/pkg/palette"
 	"pokered/pkg/sprite"
 	"pokered/pkg/store"
 	"pokered/pkg/text"
-	"pokered/pkg/util"
 	"pokered/pkg/widget"
 	"pokered/pkg/world"
 
@@ -25,8 +25,6 @@ func (g *Game) Update(screen *ebiten.Image) error {
 	if g.frame == 0 {
 		initialize()
 	}
-	util.BlackScreen(store.TileMap)
-	// debug(g, 10)
 	exec()
 	vBlank()
 	g.frame++
@@ -63,20 +61,22 @@ func exec() {
 	}
 	switch m := mode(); m {
 	case Overworld:
-		execOverworld()
+		overworld.ExecOverworld()
 	case Script:
 		execScript()
 	}
 }
 
 func vBlank() {
-	p := store.SpriteData[0]
-
 	joypad.ReadJoypad()
 	store.DecFrameCounter()
 	audio.FadeOutAudio()
-	world.VBlank(p.MapXCoord, p.MapYCoord, p.DeltaX, p.DeltaY, p.WalkCounter, p.Direction)
-	sprite.VBlank()
+
+	if isOverworld() || store.SpriteData[0] != nil {
+		p := store.SpriteData[0]
+		world.VBlank(p.MapXCoord, p.MapYCoord, p.DeltaX, p.DeltaY, p.WalkCounter, p.Direction)
+		sprite.VBlank()
+	}
 	menu.VBlank()
 	widget.VBlank()
 	text.VBlank()

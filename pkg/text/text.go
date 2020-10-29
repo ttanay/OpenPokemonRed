@@ -80,7 +80,7 @@ func PlaceStringOneByOne(target *ebiten.Image, str string) string {
 		rParen := strings.Index(str, "}")
 		if lParen == 1 || rParen > 1 {
 			key := string(runes[lParen+1 : rParen])
-			str = string(runes[rParen:])
+			str = string(runes[rParen+1:])
 			if value, ok := txt.RAM[key]; ok {
 				str = value() + str
 			} else if value, ok := txt.Asm[key]; ok {
@@ -111,7 +111,10 @@ func PlaceStringOneByOne(target *ebiten.Image, str string) string {
 				resetBlink()
 			}
 		case "d":
-			str = string(runes[2:])
+			if pressed := placeDone(); pressed {
+				Image = util.NewImage()
+				str = ""
+			}
 		case "▼":
 			placePrompt(target)
 			str = string(runes[2:])
@@ -120,13 +123,19 @@ func PlaceStringOneByOne(target *ebiten.Image, str string) string {
 		}
 	case "'":
 		switch string(runes[1]) {
-		case "d", "l", "s", "t", "v":
+		case "d", "l", "s", "t", "v", "m", "r":
 			c += string(runes[1])
 			if IsCorrectChar(c) {
 				x, y := Caret()
 				placeCharNext(target, c, x, y)
 			}
 			str = string(runes[2:])
+		default:
+			if IsCorrectChar(c) {
+				x, y := Caret()
+				placeCharNext(target, c, x, y)
+			}
+			str = string(runes[1:])
 		}
 	default:
 		if IsCorrectChar(c) {
@@ -187,6 +196,11 @@ func manualTextScroll() bool {
 	return pressed
 }
 
+func placeDone() bool {
+	pressed := WaitForTextScrollButtonPress()
+	return pressed
+}
+
 // WaitForTextScrollButtonPress wait for AB button press
 func WaitForTextScrollButtonPress() bool {
 	handleDownArrowBlinkTiming()
@@ -229,5 +243,26 @@ func placePage() {}
 func placeDex()  {}
 
 func VBlank() {
+	if Image == nil {
+		return
+	}
 	util.DrawImage(store.TileMap, Image, 0, 0)
+}
+
+func DisplayTextID(target *ebiten.Image, texts []string, textID int) {
+	if target == nil {
+		return
+	}
+
+	store.FrameCounter = 30
+
+	numOfSprites := store.NumSprites()
+	if textID < numOfSprites {
+		textID = store.SpriteData[textID].TextID
+	}
+
+	if textID > len(texts)-1 {
+		return
+	}
+	PrintText(target, texts[textID])
 }

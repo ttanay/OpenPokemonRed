@@ -57,6 +57,16 @@ func BlackScreen(target *ebiten.Image) {
 func WhiteScreen(target *ebiten.Image) {
 	target.Fill(color.NRGBA{0xf8, 0xf8, 0xf8, 0xff})
 }
+func FillScreen(target *ebiten.Image, r, g, b byte) {
+	target.Fill(color.NRGBA{r, g, b, 0xff})
+}
+
+func BlackScreenArea(target *ebiten.Image, x, y Tile, h, w int) {
+	width, height := TileToPixel(Tile(w), Tile(h))
+	sheet, _ := ebiten.NewImage(width, height, ebiten.FilterDefault)
+	sheet.Fill(color.NRGBA{0x00, 0x00, 0x00, 0xff})
+	DrawImage(target, sheet, x, y)
+}
 
 // ClearScreenArea clear h×w tiles from (x, y)
 func ClearScreenArea(target *ebiten.Image, x, y Tile, h, w uint) {

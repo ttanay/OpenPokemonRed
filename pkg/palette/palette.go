@@ -1,7 +1,6 @@
 package palette
 
 import (
-	"pokered/pkg/script"
 	"pokered/pkg/store"
 )
 
@@ -10,6 +9,11 @@ func LoadGBPal() {
 }
 
 func GBFadeOutToBlack() {
-	script.SetID(script.FadeOutToBlack)
+	store.SetScriptID(store.FadeOutToBlack)
+	store.FadeCounter = 4
+}
+
+func GBFadeOutToWhite() {
+	store.SetScriptID(store.FadeOutToWhite)
 	store.FadeCounter = 4
 }

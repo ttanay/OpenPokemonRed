@@ -27,14 +27,14 @@ type Warp struct {
 
 type Sign struct {
 	XCoord, YCoord int
-	TextID         uint
+	TextID         int
 }
 
 type Sprite struct {
 	ID             sprdata.SpriteID
 	XCoord, YCoord int
 	MovementBytes  [2]byte
-	TextID         uint
+	TextID         int
 }
 
 // WarpTo other map can warp to this WarpTo
@@ -56,6 +56,8 @@ func Get(id int) *Object {
 		return Route1
 	case worldmap.ROUTE_21:
 		return Route21
+	case worldmap.OAKS_LAB:
+		return OaksLab
 	}
 	util.NotRegisteredError("object.Get", id)
 	return nil

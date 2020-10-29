@@ -33,21 +33,28 @@ func InitMapSprites() {
 	}
 	sprites := world.CurWorld.Object.Sprites
 	for _, s := range sprites {
-		addSprite(s.ID, s.XCoord, s.YCoord, s.MovementBytes)
+		addSprite(s.ID, s.XCoord, s.YCoord, s.MovementBytes, s.TextID)
 	}
 }
 
 // AddSprite add sprite into SpriteData
-func addSprite(id sprdata.SpriteID, x, y util.Coord, movementBytes [2]byte) {
+func addSprite(id sprdata.SpriteID, x, y util.Coord, movementBytes [2]byte, textID int) {
 	imgs := make([]*ebiten.Image, 10)
 	for i := 0; i < 10; i++ {
 		name := id.String()
 		path := fmt.Sprintf("/%s_%d.png", name, i)
+
 		f, err := store.FS.Open(path)
 		if err != nil {
-			// NOTE: NotFoundFileError isn't needed
-			break
+			if i > 0 {
+				break
+			}
+			f, err = store.FS.Open(fmt.Sprintf("/%s.png", name))
+			if err != nil {
+				break
+			}
 		}
+
 		defer f.Close()
 
 		img, _ := png.Decode(f)
@@ -55,7 +62,7 @@ func addSprite(id sprdata.SpriteID, x, y util.Coord, movementBytes [2]byte) {
 	}
 
 	p := store.SpriteData[0]
-	n := NumSprites()
+	n := store.NumSprites()
 	s := &store.Sprite{
 		ScreenXPixel:  16 * (x - p.MapXCoord + 4),
 		ScreenYPixel:  16*(y+4-p.MapYCoord) - 4,
@@ -66,17 +73,9 @@ func addSprite(id sprdata.SpriteID, x, y util.Coord, movementBytes [2]byte) {
 			Index:  1,
 			Images: imgs,
 		},
+		TextID: textID,
 	}
 	store.SpriteData[n] = s
-}
-
-// NumSprites a number of sprites at current map
-func NumSprites() uint {
-	i := uint(0)
-	for store.SpriteData[i] != nil {
-		i++
-	}
-	return i
 }
 
 // UpdateSprites update sprite data
@@ -188,6 +187,10 @@ func drawSprite(offset uint) {
 
 // VBlank script executed in VBlank
 func VBlank() {
+	if world.CurWorld == nil {
+		return
+	}
+
 	if !world.CurWorld.Object.Initialized {
 		InitMapSprites()
 		world.CurWorld.Object.Initialized = true
@@ -201,4 +204,46 @@ func VBlank() {
 		}
 		drawSprite(uint(i))
 	}
+}
+
+// GetFrontSpriteOrSign hoge
+func GetFrontSpriteOrSign(offset int) int {
+	s := store.SpriteData[offset]
+	if s == nil {
+		return -1
+	}
+
+	xCoord, yCoord, direction := s.MapXCoord, s.MapYCoord, s.Direction
+	switch direction {
+	case util.Up:
+		yCoord--
+	case util.Down:
+		yCoord++
+	case util.Left:
+		xCoord--
+	case util.Right:
+		xCoord++
+	}
+
+	signs := world.CurWorld.Object.Signs
+	for _, sign := range signs {
+		if xCoord == sign.XCoord && yCoord == sign.YCoord {
+			return sign.TextID
+		}
+	}
+
+	for i, npc := range store.SpriteData {
+		if i == offset {
+			continue
+		}
+		if npc == nil {
+			return -1
+		}
+
+		if xCoord == npc.MapXCoord && yCoord == npc.MapYCoord {
+			return i
+		}
+	}
+
+	return -1
 }
