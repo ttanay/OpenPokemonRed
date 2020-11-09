@@ -6,7 +6,7 @@ import (
 	"pokered/pkg/text"
 	"pokered/pkg/util"
 
-	"github.com/hajimehoshi/ebiten"
+	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
 type SelectMenu struct {
@@ -79,9 +79,9 @@ func NewSelectMenu(elm []string, x0, y0, width, height util.Tile, space, wrap bo
 // HandleSelectMenuInput メニューでのキー入力に対処するハンドラ
 func HandleSelectMenuInput() joypad.Input {
 	s := CurSelectMenu()
-	PlaceCursor(s.image, s)
+	EraseAllCursors(s.image, s.topX, s.topY, len(s.Elm), 2)
+	PlaceMenuCursor(s.image, s.topX, s.topY, int(s.current), 2)
 	store.DelayFrames = 3
-	// TODO: AnimatePartyMon
 
 	joypad.JoypadLowSensitivity()
 	if !joypad.Joy5.Any() {
@@ -89,6 +89,6 @@ func HandleSelectMenuInput() joypad.Input {
 	}
 
 	maxItem := uint(len(s.Elm) - 1)
-	s.current = handleMenuInput(s.current, maxItem, s.wrap)
+	s.current = HandleMenuInput(s.current, maxItem, s.wrap)
 	return joypad.Joy5
 }

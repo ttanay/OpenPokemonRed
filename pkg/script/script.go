@@ -20,6 +20,7 @@ func newScriptMap() map[uint]func() {
 	result[store.WidgetBag] = widgetBag
 	result[store.WidgetTrainerCard] = widgetTrainerCard
 	result[store.WidgetNamingScreen] = widgetNamingScreen
+	result[store.WidgetPartyMenu] = widgetPartyMenu
 	result[store.FadeOutToBlack] = fadeOutToBlack
 	result[store.FadeOutToWhite] = fadeOutToWhite
 	result[store.LoadMapData] = loadMapData
@@ -28,6 +29,8 @@ func newScriptMap() map[uint]func() {
 	result[store.TitleIntroScene] = titleIntroScene
 	result[store.TitleWhiteOut] = titleWhiteOut
 	result[store.TitlePokemonRed] = titlePokemonRed
+	result[store.TitleMenu] = titleMenu
+	result[store.TitleMenu2] = titleMenu2
 	return result
 }
 
@@ -49,7 +52,7 @@ func execText() {
 	}
 
 	if text.InScroll {
-		text.ScrollTextUpOneLine(text.Image)
+		text.ScrollTextUpOneLine(text.TextBoxImage)
 		return
 	}
 
@@ -67,7 +70,7 @@ func execText() {
 		return
 	}
 
-	text.CurText = text.PlaceStringOneByOne(text.Image, text.CurText)
+	text.CurText = text.PlaceStringOneByOne(text.TextBoxImage, text.CurText)
 	if len([]rune(text.CurText)) == 0 {
 		store.SetScriptID(store.Overworld)
 	}

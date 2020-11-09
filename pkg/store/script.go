@@ -9,6 +9,7 @@ const (
 	WidgetBag
 	WidgetTrainerCard
 	WidgetNamingScreen
+	WidgetPartyMenu
 	FadeOutToBlack
 	FadeOutToWhite
 	LoadMapData
@@ -17,6 +18,8 @@ const (
 	TitleIntroScene
 	TitleWhiteOut
 	TitlePokemonRed
+	TitleMenu
+	TitleMenu2
 )
 
 type ScriptQueue struct {

@@ -3,7 +3,7 @@ package menu
 import (
 	"pokered/pkg/data/item"
 	"pokered/pkg/data/move"
-	"pokered/pkg/data/pokemon"
+	"pokered/pkg/data/pkmnd"
 	"pokered/pkg/joypad"
 	"pokered/pkg/store"
 	"pokered/pkg/text"
@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hajimehoshi/ebiten"
+	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
@@ -102,11 +102,12 @@ func DisplayListMenuIDLoop() joypad.Input {
 	CurListMenu.PrintEntries()
 	previous := CurListMenu.current
 	pressed := HandleListMenuInput(target)
-	PlaceCursor(target, &CurListMenu)
+	EraseAllCursors(target, ListMenuTopX, ListMenuTopY, 4, 2)
+	PlaceMenuCursor(target, ListMenuTopX, ListMenuTopY, int(CurListMenu.current), 2)
 
 	switch {
 	case pressed.A:
-		PlaceUnfilledArrowCursor(target, &CurListMenu)
+		PlaceUnfilledArrowCursor(target, ListMenuTopX, ListMenuTopY, int(CurListMenu.current), 2)
 	case pressed.Down:
 		if CurListMenu.offset+3 < uint(len(CurListMenu.Elm)+1) {
 			if previous == 2 {
@@ -126,7 +127,8 @@ func DisplayListMenuIDLoop() joypad.Input {
 // HandleListMenuInput メニューでのキー入力に対処するハンドラ
 func HandleListMenuInput(target *ebiten.Image) joypad.Input {
 	l := &CurListMenu
-	PlaceCursor(target, l)
+	EraseAllCursors(target, ListMenuTopX, ListMenuTopY, 4, 2)
+	PlaceMenuCursor(target, ListMenuTopX, ListMenuTopY, int(l.current), 2)
 	store.DelayFrames = 3
 	// TODO: AnimatePartyMon
 
@@ -141,7 +143,7 @@ func HandleListMenuInput(target *ebiten.Image) joypad.Input {
 	} else {
 		maxItem++
 	}
-	l.current = handleMenuInput(l.current, maxItem, l.wrap)
+	l.current = HandleMenuInput(l.current, maxItem, l.wrap)
 	return joypad.Joy5
 }
 
@@ -171,7 +173,7 @@ func (l *ListMenu) PrintEntries() {
 		switch l.ID {
 		case PCPokemonListMenu:
 			id, _ := ParseListMenuElm(e)
-			name := pokemon.Name(id)
+			name := pkmnd.Name(id)
 			text.PlaceStringAtOnce(l.image, name, nameAtX, nameAtY)
 		case MovesListMenu:
 			id, _ := ParseListMenuElm(e)

@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/hajimehoshi/ebiten"
+	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
-var Image = util.NewImage()
+var TextBoxImage *ebiten.Image
 
 // CurText text which should be displayed
 var CurText = ""
@@ -52,7 +52,7 @@ func PlaceString(str string, x, y util.Tile) {
 // PlaceStringAtOnce print string at once
 func PlaceStringAtOnce(target *ebiten.Image, str string, x, y util.Tile) {
 	if target == nil {
-		target = Image
+		TextBoxImage = util.NewImage()
 	}
 	Seek(x, y)
 	for str != "" {
@@ -68,6 +68,10 @@ func PlaceUintAtOnce(target *ebiten.Image, num uint, x, y util.Tile) {
 
 // PlaceStringOneByOne place CurText into screen one by one
 func PlaceStringOneByOne(target *ebiten.Image, str string) string {
+	if target == nil {
+		TextBoxImage = util.NewImage()
+	}
+
 	if len([]rune(str)) == 0 {
 		return str
 	}
@@ -112,7 +116,7 @@ func PlaceStringOneByOne(target *ebiten.Image, str string) string {
 			}
 		case "d":
 			if pressed := placeDone(); pressed {
-				Image = util.NewImage()
+				TextBoxImage = nil
 				str = ""
 			}
 		case "▼":
@@ -124,6 +128,22 @@ func PlaceStringOneByOne(target *ebiten.Image, str string) string {
 	case "'":
 		switch string(runes[1]) {
 		case "d", "l", "s", "t", "v", "m", "r":
+			c += string(runes[1])
+			if IsCorrectChar(c) {
+				x, y := Caret()
+				placeCharNext(target, c, x, y)
+			}
+			str = string(runes[2:])
+		default:
+			if IsCorrectChar(c) {
+				x, y := Caret()
+				placeCharNext(target, c, x, y)
+			}
+			str = string(runes[1:])
+		}
+	case ":":
+		switch string(runes[1]) {
+		case "L":
 			c += string(runes[1])
 			if IsCorrectChar(c) {
 				x, y := Caret()
@@ -226,7 +246,7 @@ func ScrollTextUpOneLine(target *ebiten.Image) {
 	min := image.Point{minX, minY}
 	maxX, maxY := util.TileToPixel(19, 17)
 	max := image.Point{maxX, maxY}
-	texts, _ := ebiten.NewImageFromImage(target.SubImage(image.Rectangle{min, max}), ebiten.FilterDefault)
+	texts := ebiten.NewImageFromImage(target.SubImage(image.Rectangle{min, max}))
 	util.DrawImage(target, texts, 1, 13)
 	for w := 1; w < 19; w++ {
 		PlaceChar(target, " ", w, 16)
@@ -243,15 +263,22 @@ func placePage() {}
 func placeDex()  {}
 
 func VBlank() {
-	if Image == nil {
+	if TextBoxImage == nil {
 		return
 	}
-	util.DrawImage(store.TileMap, Image, 0, 0)
+	util.DrawImage(store.TileMap, TextBoxImage, 0, 0)
+}
+
+// FontLoaded dialog box is rendered
+// ref: wFontLoaded
+func FontLoaded() bool {
+	return TextBoxImage != nil
 }
 
 func DisplayTextID(target *ebiten.Image, texts []string, textID int) {
 	if target == nil {
-		return
+		TextBoxImage = util.NewImage()
+		target = TextBoxImage
 	}
 
 	store.FrameCounter = 30
@@ -262,6 +289,7 @@ func DisplayTextID(target *ebiten.Image, texts []string, textID int) {
 	}
 
 	if textID > len(texts)-1 {
+		TextBoxImage = nil
 		return
 	}
 	PrintText(target, texts[textID])

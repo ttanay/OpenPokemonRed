@@ -4,10 +4,11 @@ import (
 	"image"
 	"net/http"
 	"pokered/pkg/audio"
-	"pokered/pkg/data/pokemon"
+	"pokered/pkg/data/pkmnd"
 	"pokered/pkg/data/tileset"
 	"pokered/pkg/data/worldmap"
 	"pokered/pkg/joypad"
+	"pokered/pkg/menu"
 	"pokered/pkg/palette"
 	"pokered/pkg/sprite"
 	"pokered/pkg/store"
@@ -15,7 +16,7 @@ import (
 	"pokered/pkg/util"
 	"pokered/pkg/world"
 
-	"github.com/hajimehoshi/ebiten"
+	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
 const (
@@ -49,21 +50,21 @@ var (
 )
 
 var titleMons = []uint{
-	pokemon.CHARMANDER,
-	pokemon.BULBASAUR,
-	pokemon.WEEDLE,
-	pokemon.NIDORAN_M,
-	pokemon.SCYTHER,
-	pokemon.PIKACHU,
-	pokemon.CLEFAIRY,
-	pokemon.RHYDON,
-	pokemon.ABRA,
-	pokemon.GASTLY,
-	pokemon.DITTO,
-	pokemon.PIDGEOTTO,
-	pokemon.ONIX,
-	pokemon.PONYTA,
-	pokemon.MAGIKARP,
+	pkmnd.CHARMANDER,
+	pkmnd.BULBASAUR,
+	pkmnd.WEEDLE,
+	pkmnd.NIDORAN_M,
+	pkmnd.SCYTHER,
+	pkmnd.PIKACHU,
+	pkmnd.CLEFAIRY,
+	pkmnd.RHYDON,
+	pkmnd.ABRA,
+	pkmnd.GASTLY,
+	pkmnd.DITTO,
+	pkmnd.PIDGEOTTO,
+	pkmnd.ONIX,
+	pkmnd.PONYTA,
+	pkmnd.MAGIKARP,
 }
 
 type Title struct {
@@ -404,11 +405,12 @@ func titlePokemonRed() {
 	title.counter++
 
 	if title.counter > 88 && checkForUserInterruption() {
-		initializeOverworld()
+		title.counter = 0
+		store.SetScriptID(store.TitleMenu)
 	}
 }
 
-func initializeOverworld() {
+func InitializeOverworld() {
 	initTilesets(store.FS)
 	world.LoadWorldData(worldmap.PALLET_TOWN)
 	sprite.InitPlayer(sprite.Normal, 3, 4)
@@ -474,10 +476,7 @@ func initTilesets(fs http.FileSystem) {
 		for h := 0; h < height; h++ {
 			for w := 0; w < width; w++ {
 				min, max := image.Point{w * 8, h * 8}, image.Point{(w + 1) * 8, (h + 1) * 8}
-				tile, err := ebiten.NewImageFromImage(img.SubImage(image.Rectangle{min, max}), ebiten.FilterDefault)
-				if err != nil {
-					panic(err)
-				}
+				tile := ebiten.NewImageFromImage(img.SubImage(image.Rectangle{min, max}))
 				result[uint(id)] = append(result[uint(id)], tile)
 			}
 		}
@@ -497,4 +496,35 @@ func checkForUserInterruption() bool {
 	}
 
 	return false
+}
+
+func titleMenu() {
+	store.SetScriptID(store.TitleMenu2)
+	util.WhiteScreen(store.TileMap)
+	height := 3 * 2
+	elm := []string{
+		"CONTINUE",
+		"NEW GAME",
+		"OPTION",
+	}
+	menu.NewSelectMenu(elm, 0, 0, 13, height, true, false)
+}
+
+func titleMenu2() {
+	m := menu.CurSelectMenu()
+	pressed := menu.HandleSelectMenuInput()
+
+	switch {
+	case pressed.A:
+		switch m.Item() {
+		case "CONTINUE":
+		case "NEW GAME":
+			m.Close()
+			InitializeOverworld()
+		case "OPTION":
+		}
+	case pressed.B:
+		m.Close()
+		store.SetScriptID(store.TitlePokemonRed)
+	}
 }

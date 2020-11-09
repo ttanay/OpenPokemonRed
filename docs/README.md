@@ -4,7 +4,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/Akatsuki-py/OpenPokemonRed)](https://github.com/Akatsuki-py/OpenPokemonRed/stargazers)
 [![GitHub license](https://img.shields.io/github/license/Akatsuki-py/OpenPokemonRed)](https://github.com/Akatsuki-py/OpenPokemonRed/blob/master/LICENSE)
 
-<img src="package.jpg" width="240px" />
+<img src="header.png" />
 
 
 ## 🔰 Description
@@ -22,12 +22,11 @@ For example, text drawing, sound playback, and combat systems.
 
 ## 📽 Demo
 
-<img src="./screenshots/demo.gif" width="360px" height="360px" />
-
+<img src="./screenshots/demo.gif" width="280px" height="280px" />
 
 ## 🏞 Screenshots
 
-Screenshots as of v0.0.7 (Text engine, Menu engine, Sprites engine, some Widgets, part of Map engine)
+Screenshots as of v0.0.9 (Text engine, Menu engine, Sprites engine, some Widgets, part of Map engine)
 
 <img src="./screenshots/overworld_0.png" width="360px" height="360px" /> &nbsp;&nbsp; <img src="./screenshots/trainer_card.png" width="360px" height="360px" />
 
