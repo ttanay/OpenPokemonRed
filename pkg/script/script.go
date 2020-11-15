@@ -19,8 +19,10 @@ func newScriptMap() map[uint]func() {
 	result[store.WidgetStartMenu2] = widgetStartMenu2
 	result[store.WidgetBag] = widgetBag
 	result[store.WidgetTrainerCard] = widgetTrainerCard
-	result[store.WidgetNamingScreen] = widgetNamingScreen
+	result[store.WidgetPlayerNamingScreen] = widgetPlayerNamingScreen
+	result[store.WidgetRivalNamingScreen] = widgetRivalNamingScreen
 	result[store.WidgetPartyMenu] = widgetPartyMenu
+	result[store.WidgetPartyMenuSelect] = widgetPartyMenuSelect
 	result[store.FadeOutToBlack] = fadeOutToBlack
 	result[store.FadeOutToWhite] = fadeOutToWhite
 	result[store.LoadMapData] = loadMapData
@@ -31,24 +33,68 @@ func newScriptMap() map[uint]func() {
 	result[store.TitlePokemonRed] = titlePokemonRed
 	result[store.TitleMenu] = titleMenu
 	result[store.TitleMenu2] = titleMenu2
+	result[store.OakSpeech0] = oakSpeech0
+	result[store.OakSpeech1] = oakSpeech1
+	result[store.OakSpeech2] = oakSpeech2
+	result[store.IntroducePlayer] = introducePlayer
+	result[store.ChoosePlayerName] = choosePlayerName
+	result[store.ChoosePlayerName2] = choosePlayerName2
+	result[store.CustomPlayerName] = customPlayerName
+	result[store.AfterChoosePlayerName] = afterChoosePlayerName
+	result[store.AfterCustomPlayerName] = afterCustomPlayerName
+	result[store.IntroduceRival] = introduceRival
+	result[store.ChooseRivalName] = chooseRivalName
+	result[store.ChooseRivalName2] = chooseRivalName2
+	result[store.CustomRivalName] = customRivalName
+	result[store.AfterChooseRivalName] = afterChooseRivalName
+	result[store.AfterCustomRivalName] = afterCustomRivalName
+	result[store.LetsGoPlayer] = letsGoPlayer
+	result[store.ShrinkPlayer] = shrinkPlayer
 	return result
 }
 
 // Current return current script
 func Current() func() {
-	s, ok := scriptMap[store.ScriptID()]
-	if !ok {
-		util.NotRegisteredError("scriptMap", store.ScriptID())
-		return halt
+	sid := store.ScriptID()
+
+	switch s := sid.(type) {
+	case int:
+		sc, ok := scriptMap[uint(s)]
+		if !ok {
+			util.NotRegisteredError("scriptMap", store.ScriptID())
+			return halt
+		}
+		return sc
+	case uint:
+		sc, ok := scriptMap[s]
+		if !ok {
+			util.NotRegisteredError("scriptMap", store.ScriptID())
+			return halt
+		}
+		return sc
+	case func():
+		return func() {
+			s()
+			nextScript()
+		}
+	default:
+		return scriptMap[0]
 	}
-	return s
+}
+
+func nextScript() {
+	if store.ScriptLength() > 1 {
+		store.PopScript()
+		return
+	}
+	store.SetScriptID(store.Overworld)
 }
 
 func halt() {}
 
 func execText() {
 	if len([]rune(text.CurText)) == 0 {
-		store.SetScriptID(store.Overworld)
+		nextScript()
 	}
 
 	if text.InScroll {
@@ -72,7 +118,7 @@ func execText() {
 
 	text.CurText = text.PlaceStringOneByOne(text.TextBoxImage, text.CurText)
 	if len([]rune(text.CurText)) == 0 {
-		store.SetScriptID(store.Overworld)
+		nextScript()
 	}
 }
 
@@ -93,13 +139,13 @@ func fadeOutToBlack() {
 	store.DelayFrames = 8
 
 	if store.FadeCounter <= 0 {
-		store.PopScriptID()
+		store.PopScript()
 	}
 }
 
 func fadeOutToWhite() {
 	if store.FadeCounter <= 0 {
-		store.SetScriptID(store.Overworld)
+		nextScript()
 		return
 	}
 
@@ -114,7 +160,7 @@ func fadeOutToWhite() {
 	store.DelayFrames = 8
 
 	if store.FadeCounter <= 0 {
-		store.PopScriptID()
+		nextScript()
 	}
 }
 

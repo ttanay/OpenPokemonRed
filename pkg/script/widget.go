@@ -25,7 +25,7 @@ func widgetStartMenu2() {
 		case "ITEM":
 			store.SetScriptID(store.WidgetBag)
 			menu.NewListMenuID(menu.ItemListMenu, store.BagItems)
-		case "RED":
+		case store.Player.Name:
 			m.Close()
 			store.SetScriptID(store.WidgetTrainerCard)
 			widget.DrawTrainerCard()
@@ -64,7 +64,7 @@ func widgetTrainerCard() {
 	}
 }
 
-func widgetNamingScreen() {
+func handleNamingScreen() (string, bool) {
 	widget.UpdateNameScreen()
 
 	joypad.JoypadLowSensitivity()
@@ -83,7 +83,11 @@ func widgetNamingScreen() {
 		widget.NextChar()
 	case joypad.Joy5.B:
 		widget.EraseChar()
+	case joypad.Joy5.Start:
+		name := widget.CloseNameScreen()
+		return name, true
 	}
+	return "", false
 }
 
 func widgetPartyMenu() {
@@ -91,8 +95,35 @@ func widgetPartyMenu() {
 	widget.AnimatePartyMon()
 
 	switch {
+	case pressed.A:
+		store.SetScriptID(store.WidgetPartyMenuSelect)
+		width, height := 8, 7
+		elm := []string{
+			"STATS",
+			"SWITCH",
+			menu.Cancel,
+		}
+		menu.NewSelectMenu(elm, 11, 10, width, height, false, false)
 	case pressed.B:
 		widget.ClosePartyMenu()
 		store.SetScriptID(store.WidgetStartMenu)
+	}
+}
+
+func widgetPartyMenuSelect() {
+	m := menu.CurSelectMenu()
+	pressed := menu.HandleSelectMenuInput()
+	switch {
+	case pressed.A:
+		switch m.Item() {
+		case "STATS":
+		case "SWITCH":
+		case menu.Cancel:
+			m.Close()
+			store.SetScriptID(store.WidgetPartyMenu)
+		}
+	case pressed.B:
+		m.Close()
+		store.SetScriptID(store.WidgetPartyMenu)
 	}
 }
