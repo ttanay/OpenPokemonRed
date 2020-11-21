@@ -1,12 +1,17 @@
 package script
 
 import (
+	"pokered/pkg/audio"
 	"pokered/pkg/joypad"
 	"pokered/pkg/menu"
+	"pokered/pkg/screen"
 	"pokered/pkg/store"
+	"pokered/pkg/text"
 	"pokered/pkg/util"
 	"pokered/pkg/widget"
 )
+
+var MonOffset int = -1
 
 func widgetStartMenu() {
 	store.SetScriptID(store.WidgetStartMenu2)
@@ -96,14 +101,15 @@ func widgetPartyMenu() {
 
 	switch {
 	case pressed.A:
+		MonOffset = int(widget.PartyMonOffset())
 		store.SetScriptID(store.WidgetPartyMenuSelect)
-		width, height := 8, 7
+		width, height := 7, 5
 		elm := []string{
 			"STATS",
 			"SWITCH",
 			menu.Cancel,
 		}
-		menu.NewSelectMenu(elm, 11, 10, width, height, false, false)
+		menu.NewSelectMenu(elm, 11, 11, width, height, false, false, screen.Widget)
 	case pressed.B:
 		widget.ClosePartyMenu()
 		store.SetScriptID(store.WidgetStartMenu)
@@ -117,13 +123,70 @@ func widgetPartyMenuSelect() {
 	case pressed.A:
 		switch m.Item() {
 		case "STATS":
+			m.Close()
+			audio.ReduceVolume()
+			store.SetScriptID(store.WidgetStats)
 		case "SWITCH":
 		case menu.Cancel:
 			m.Close()
+			MonOffset = -1
 			store.SetScriptID(store.WidgetPartyMenu)
 		}
 	case pressed.B:
 		m.Close()
+		MonOffset = -1
 		store.SetScriptID(store.WidgetPartyMenu)
+	}
+}
+
+// ref: StatusScreen
+func widgetStats() {
+	reset := false
+	defer func() {
+		if reset {
+			counter = 0
+			return
+		}
+		counter++
+	}()
+
+	switch {
+	case counter == 0:
+		widget.InitStatusScreen(MonOffset)
+	case counter == 10:
+		widget.RenderStatusScreen1()
+	case counter == 50:
+		widget.RenderPokemonAndCryOnStatusScreen1()
+	case counter > 50:
+		if text.WaitForTextScrollButtonPress() {
+			reset = true
+			store.SetScriptID(store.WidgetStats2)
+		}
+	}
+}
+
+// ref: StatusScreen2
+func widgetStats2() {
+	reset := false
+	defer func() {
+		if reset {
+			counter = 0
+			return
+		}
+		counter++
+	}()
+
+	switch {
+	case counter == 0:
+	case counter == 10:
+		widget.RenderStatusScreen2()
+	case counter > 10:
+		if text.WaitForTextScrollButtonPress() {
+			reset = true
+			widget.CloseStatusScreen()
+			audio.SetVolumeMax()
+			DoWhiteScreen(30, false)
+			store.PushScriptID(store.WidgetPartyMenu)
+		}
 	}
 }

@@ -1,10 +1,11 @@
 package menu
 
 import (
+	"fmt"
 	"pokered/pkg/audio"
 	"pokered/pkg/joypad"
+	"pokered/pkg/screen"
 	"pokered/pkg/store"
-	"pokered/pkg/util"
 	"sort"
 )
 
@@ -15,7 +16,7 @@ var downArrowBlinkCnt = 6 * 10
 
 // MaxZIndex get max z index
 func MaxZIndex() uint {
-	selectZ := uint(0)
+	selectZ := uint(screen.MenuMin)
 	for _, s := range CurSelectMenus {
 		if s.z > selectZ {
 			selectZ = s.z
@@ -39,14 +40,14 @@ func VBlank() {
 		}
 
 		if listZ > 0 && listZ < m.z {
-			util.DrawImage(store.TileMap, CurListMenu.image, 0, 0)
+			screen.AddLayer("listmenu", int(listZ), CurListMenu.image, 0, 0)
 			done = true
 		}
-		util.DrawImage(store.TileMap, m.image, 0, 0)
+		screen.AddLayer(fmt.Sprintf("selectmenu%d", m.z), int(m.z), m.image, 0, 0)
 		newCurSelectMenus = append(newCurSelectMenus, m)
 	}
 	if !done && CurListMenu.z > 0 {
-		util.DrawImage(store.TileMap, CurListMenu.image, 0, 0)
+		screen.AddLayer("listmenu", int(CurListMenu.z), CurListMenu.image, 0, 0)
 	}
 	CurSelectMenus = newCurSelectMenus
 }
@@ -68,7 +69,7 @@ func HandleMenuInput(current, maxItem uint, wrap bool) uint {
 	}
 
 	if joypad.Joy5.A || joypad.Joy5.B {
-		if !util.ReadBit(store.CD60, 5) {
+		if !store.Flag.CD60.DontPlayMenuSound {
 			audio.PlaySound(audio.SFX_PRESS_AB)
 		}
 	}

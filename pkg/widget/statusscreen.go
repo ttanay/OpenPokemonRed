@@ -2,6 +2,11 @@ package widget
 
 import (
 	"fmt"
+	"pokered/pkg/audio"
+	"pokered/pkg/data/move"
+	"pokered/pkg/data/pkmnd"
+	"pokered/pkg/pkmn"
+	"pokered/pkg/screen"
 	"pokered/pkg/store"
 	"pokered/pkg/text"
 	"pokered/pkg/util"
@@ -9,16 +14,27 @@ import (
 	ebiten "github.com/hajimehoshi/ebiten/v2"
 )
 
+var statusScreen *ebiten.Image
+var targetMon store.BoxMon
+
+const (
+	statusFrame  string = "/status_screen1.png"
+	statusFrame2 string = "/status_screen2.png"
+)
+
 // DrawHP draw HP bar and HP value
 // ref: DrawHP_
 func DrawHP(target *ebiten.Image, hp, maxHP uint, x, y util.Tile, isRight bool) {
-	px := int(hp * 48 / maxHP)
+	px := 0
+	if maxHP > 0 {
+		px = int(hp * 48 / maxHP)
+	}
 	DrawHPBar(target, px, x, y)
 
 	if isRight {
 		x += 9
 	} else {
-		x += 2
+		x++
 		y++
 	}
 
@@ -63,4 +79,99 @@ func PrintLevel(target *ebiten.Image, level uint, x, y util.Tile) {
 
 	text.PlaceChar(target, ":L", x, y)
 	text.PlaceUintAtOnce(target, level, x+1, y)
+}
+
+// InitStatusScreen init status screen
+func InitStatusScreen(offset int) {
+	targetMon = *store.PartyMons[offset].BoxMon
+	statusScreen = util.NewImage()
+	// audio.ReduceVolume()
+	util.WhiteScreen(statusScreen)
+}
+
+func RenderStatusScreen1() {
+	mon := targetMon
+	frame := util.OpenImage(store.FS, statusFrame)
+	util.DrawImage(statusScreen, frame, 0, 0)
+
+	DrawHP(statusScreen, mon.HP, mon.HP, 11, 3, false)
+	status := mon.Status.String()
+	if len(status) == 0 {
+		status = "OK"
+	}
+	text.PlaceStringAtOnce(statusScreen, status, 16, 6)
+	PrintLevel(statusScreen, mon.BoxLevel, 14, 2)
+	text.PlaceUintAtOnce(statusScreen, mon.ID, 3, 7)
+	type1 := mon.Type[0]
+	if type1 > 0 {
+		text.PlaceStringAtOnce(statusScreen, pkmnd.TypeString(type1), 11, 10)
+	}
+	type2 := mon.Type[1]
+	if type2 > 0 {
+		text.PlaceStringAtOnce(statusScreen, pkmnd.TypeString(type2), 11, 12)
+	}
+
+	text.PlaceStringAtOnce(statusScreen, mon.Nick, 9, 1)
+	text.PlaceStringAtOnce(statusScreen, mon.OTName, 12, 16)
+	text.PlaceStringAtOnce(statusScreen, util.Padding(mon.OTID, 5, "0"), 12, 14)
+
+	base := pkmnd.BaseStatsGen1(mon.ID)
+	atk := pkmn.CalcStat(base.Attack, mon.DVs.Attack, mon.EVs.Attack, mon.BoxLevel)
+	text.PlaceStringAtOnce(statusScreen, util.Padding(atk, 3, " "), 6, 10)
+	def := pkmn.CalcStat(base.Defense, mon.DVs.Defense, mon.EVs.Defense, mon.BoxLevel)
+	text.PlaceStringAtOnce(statusScreen, util.Padding(def, 3, " "), 6, 12)
+	spd := pkmn.CalcStat(base.Speed, mon.DVs.Speed, mon.EVs.Speed, mon.BoxLevel)
+	text.PlaceStringAtOnce(statusScreen, util.Padding(spd, 3, " "), 6, 14)
+	sp := pkmn.CalcStat(base.Special, mon.DVs.SpAtk, mon.EVs.SpAtk, mon.BoxLevel)
+	text.PlaceStringAtOnce(statusScreen, util.Padding(sp, 3, " "), 6, 16)
+}
+
+func RenderPokemonAndCryOnStatusScreen1() {
+	pic := pkmn.Picture(targetMon.ID, true)
+	util.DrawImage(statusScreen, pic, 1, 0)
+	audio.Cry(targetMon.ID)
+}
+
+func RenderStatusScreen2() {
+	mon := targetMon
+	frame := util.OpenImage(store.FS, statusFrame2)
+	util.DrawImage(statusScreen, frame, 0, 0)
+
+	pic := pkmn.Picture(mon.ID, true)
+	util.DrawImage(statusScreen, pic, 1, 0)
+	text.PlaceUintAtOnce(statusScreen, mon.ID, 3, 7)
+	text.PlaceStringAtOnce(statusScreen, mon.Nick, 9, 1)
+
+	// EXP POINTS
+	text.PlaceUintAtOnce(statusScreen, uint(mon.Exp), 16, 4)
+
+	// LEVEL UP
+	gr := pkmnd.Header(mon.ID).GrowthRate
+	neededExp := pkmn.CalcExpToLevelUp(mon.BoxLevel, uint(mon.Exp), gr)
+	text.PlaceStringAtOnce(statusScreen, util.Padding(neededExp, 5, " "), 9, 6) // needed exp
+	PrintLevel(statusScreen, mon.BoxLevel+1, 16, 6)                             // next level
+
+	// MOVE
+	pp := util.OpenImage(store.FS, "/pp.png")
+	for i, m := range mon.Moves {
+		y := 9 + i*2
+		// move name
+		name := move.Name(m.ID)
+		text.PlaceStringAtOnce(statusScreen, name, 2, y)
+
+		// "PP"
+		if m.ID == 0 {
+			text.PlaceStringAtOnce(statusScreen, "--", 11, y+1)
+		} else {
+			util.DrawImage(statusScreen, pp, 11, y+1)
+			text.PlaceUintAtOnce(statusScreen, m.CurPP, 14, y+1)
+			text.PlaceChar(statusScreen, "/", 16, y+1)
+			text.PlaceUintAtOnce(statusScreen, m.CurPP, 17, y+1)
+		}
+	}
+}
+
+func CloseStatusScreen() {
+	screen.FillWhite()
+	statusScreen = nil
 }

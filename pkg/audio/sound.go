@@ -11,6 +11,7 @@ import (
 	"pokered/pkg/util"
 )
 
+// sfx enum
 const (
 	SFX_GET_ITEM_2 uint = iota
 	SFX_TINK
@@ -33,8 +34,6 @@ const (
 	SFX_SLOTS_NEW_SPIN
 	SFX_SHOOTING_STAR
 	SFX_SHRINK
-
-	SFX_CRY_NIDORINO
 )
 
 // WAV wav file
@@ -66,9 +65,6 @@ func newSoundMap() map[uint]*WAV {
 	soundMap[SFX_SLOTS_NEW_SPIN] = newWav(store.FS, "/slots_new_spin.wav")
 	soundMap[SFX_SHOOTING_STAR] = newWav(store.FS, "/shooting_star.wav")
 	soundMap[SFX_SHRINK] = newWav(store.FS, "/shrink.wav")
-
-	// cry
-	soundMap[SFX_CRY_NIDORINO] = newWav(store.FS, "/033Cry.wav")
 	return soundMap
 }
 
@@ -91,6 +87,21 @@ func PlaySound(soundID uint) {
 	sound, ok := soundMap[soundID]
 	if !ok {
 		util.NotRegisteredError("soundMap", soundID)
+		return
+	}
+	if sound.player.IsPlaying() {
+		sound.player.Seek(0)
+	} else {
+		sound.player.Seek(0)
+		sound.player.Play()
+	}
+}
+
+// Cry play pokemon cry
+func Cry(id uint) {
+	path := "/" + util.Padding(id, 3, "0") + "Cry.wav"
+	sound := newWav(store.FS, path)
+	if sound == nil {
 		return
 	}
 	if sound.player.IsPlaying() {

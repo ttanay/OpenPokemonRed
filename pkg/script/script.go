@@ -8,12 +8,16 @@ import (
 	"pokered/pkg/world"
 )
 
+// general counter used in various functions
+var counter uint
+
 // ScriptMap script ID -> script
 var scriptMap = newScriptMap()
 
 func newScriptMap() map[uint]func() {
 	result := map[uint]func(){}
 	result[store.Overworld] = halt
+	result[store.WhiteScreen] = whiteScreen
 	result[store.ExecText] = execText
 	result[store.WidgetStartMenu] = widgetStartMenu
 	result[store.WidgetStartMenu2] = widgetStartMenu2
@@ -23,6 +27,8 @@ func newScriptMap() map[uint]func() {
 	result[store.WidgetRivalNamingScreen] = widgetRivalNamingScreen
 	result[store.WidgetPartyMenu] = widgetPartyMenu
 	result[store.WidgetPartyMenuSelect] = widgetPartyMenuSelect
+	result[store.WidgetStats] = widgetStats
+	result[store.WidgetStats2] = widgetStats2
 	result[store.FadeOutToBlack] = fadeOutToBlack
 	result[store.FadeOutToWhite] = fadeOutToWhite
 	result[store.LoadMapData] = loadMapData
@@ -55,9 +61,9 @@ func newScriptMap() map[uint]func() {
 
 // Current return current script
 func Current() func() {
-	sid := store.ScriptID()
+	scr := store.Script()
 
-	switch s := sid.(type) {
+	switch s := scr.(type) {
 	case int:
 		sc, ok := scriptMap[uint(s)]
 		if !ok {
@@ -180,4 +186,27 @@ func loadMapData() {
 	p.MapXCoord, p.MapYCoord = warpTo.XCoord, warpTo.YCoord
 
 	store.SetScriptID(store.Overworld)
+}
+
+// InOakSpeech returns if game mode is OakSpeech
+func InOakSpeech() bool {
+	scriptID := store.ScriptID()
+	inOakSpeechScript := scriptID >= store.WidgetPlayerNamingScreen && scriptID <= store.ShrinkPlayer
+	inText := scriptID == store.ExecText
+
+	if inOakSpeechScript {
+		return true
+	}
+
+	if inText {
+		return OakSpeechScreen != nil
+	}
+
+	return false
+}
+
+// InTitle returns if game mode is title
+func InTitle() bool {
+	scriptID := store.ScriptID()
+	return scriptID >= store.TitleCopyright && scriptID <= store.TitleMenu2
 }

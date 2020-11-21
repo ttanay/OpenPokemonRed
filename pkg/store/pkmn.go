@@ -1,42 +1,15 @@
 package store
 
 import (
+	"pokered/pkg/data/move"
 	"pokered/pkg/data/pkmnd"
 )
 
-// NonVolatileStatus type for non-volatile statuses
-type NonVolatileStatus uint
-
-// non-volatile statuses
-const (
-	OK  NonVolatileStatus = 0
-	Psn NonVolatileStatus = 3
-	Brn NonVolatileStatus = 4
-	Frz NonVolatileStatus = 5
-	Par NonVolatileStatus = 6
-	Slp NonVolatileStatus = 7
-)
-
-func (n *NonVolatileStatus) String() string {
-	switch *n {
-	case Psn:
-		return "PSN"
-	case Brn:
-		return "BRN"
-	case Frz:
-		return "FRZ"
-	case Par:
-		return "PAR"
-	case Slp:
-		return "SLP"
-	}
-	return ""
-}
-
 // Move data stored in pokemon move slot
 type Move struct {
-	ID uint
-	PP uint
+	ID    uint
+	CurPP uint // CurPP <= MaxPP
+	MaxPP uint // affected by PPUP
 }
 
 // BoxMon data of mon in box
@@ -44,7 +17,7 @@ type BoxMon struct {
 	ID        uint
 	HP        uint
 	BoxLevel  uint
-	Status    NonVolatileStatus
+	Status    pkmnd.NonVolatileStatus
 	Type      [2]uint
 	CatchRate byte
 	Moves     [4]Move
@@ -52,9 +25,11 @@ type BoxMon struct {
 	Exp       int
 	EVs       EVStat
 	DVs       DVStat
+	OTName    string
+	Nick      string
 }
 
-// EVStat Effort Value Japanees:努力値
+// EVStat Effort Value Japanese:努力値
 type EVStat struct {
 	HP      uint
 	Attack  uint
@@ -94,8 +69,6 @@ type PartyMon struct {
 	Speed   uint
 	SpAtk   uint
 	SpDef   uint
-	OTName  string
-	Nick    string
 }
 
 // PartyMons party mon data in game
@@ -118,14 +91,19 @@ func defaultPartyMon() *PartyMon {
 			ID:        pkmnd.CHARMANDER,
 			HP:        22,
 			BoxLevel:  6,
-			Status:    OK,
+			Status:    pkmnd.OK,
 			Type:      [2]uint{pkmnd.Fire},
 			CatchRate: 255,
-			Moves:     [4]Move{}, // scratch growl
-			OTID:      48024,
-			Exp:       205,
-			EVs:       EVStat{},
-			DVs:       DVStat{},
+			Moves: [4]Move{
+				{move.SCRATCH, 35, 35},
+				{move.GROWL, 40, 40},
+			}, // scratch growl
+			OTID:   48024,
+			Exp:    205,
+			EVs:    EVStat{},
+			DVs:    DVStat{},
+			OTName: "RED",
+			Nick:   "CHARMANDER",
 		},
 		Level:   6,
 		MaxHP:   22,
@@ -133,7 +111,5 @@ func defaultPartyMon() *PartyMon {
 		Defense: 11,
 		Speed:   13,
 		SpAtk:   11,
-		OTName:  "RED",
-		Nick:    "CHARMANDER",
 	}
 }

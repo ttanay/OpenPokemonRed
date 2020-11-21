@@ -5,6 +5,7 @@ import (
 	"image/png"
 	"pokered/pkg/data/sprdata"
 	"pokered/pkg/joypad"
+	"pokered/pkg/screen"
 	"pokered/pkg/store"
 	"pokered/pkg/text"
 	"pokered/pkg/util"
@@ -33,13 +34,14 @@ func InitMapSprites() {
 		store.SpriteData[i] = nil
 	}
 	sprites := world.CurWorld.Object.Sprites
-	for _, s := range sprites {
-		addSprite(s.ID, s.XCoord, s.YCoord, s.MovementBytes, s.TextID)
+	for i, s := range sprites {
+		hidden := world.CurWorld.Object.HS[i+1]
+		addSprite(s.ID, s.XCoord, s.YCoord, s.MovementBytes, s.TextID, hidden)
 	}
 }
 
 // AddSprite add sprite into SpriteData
-func addSprite(id sprdata.SpriteID, x, y util.Coord, movementBytes [2]byte, textID int) {
+func addSprite(id sprdata.SpriteID, x, y util.Coord, movementBytes [2]byte, textID int, hidden bool) {
 	imgs := make([]*ebiten.Image, 10)
 	for i := 0; i < 10; i++ {
 		name := id.String()
@@ -75,6 +77,7 @@ func addSprite(id sprdata.SpriteID, x, y util.Coord, movementBytes [2]byte, text
 			Images: imgs,
 		},
 		TextID: textID,
+		Hidden: hidden,
 	}
 	store.SpriteData[n] = s
 }
@@ -200,15 +203,15 @@ func DisableSprite(offset uint) {
 // set wNPCMovementDirections
 func MoveSpriteForcely(offset uint, movement []byte) {
 	copy(NPCMovementDirections, movement)
-	util.SetBit(&store.D730, 0)
+	store.Flag.D730.IsNPCScripted = false
 	joypad.JoyIgnore = joypad.ByteToInput(0xff)
 }
 
 // drawSprite
-func drawSprite(offset uint) {
+func drawSprite(target *ebiten.Image, offset uint) {
 	s := store.SpriteData[offset]
 	UpdateSpriteImage(offset)
-	util.DrawImagePixel(store.TileMap, s.VRAM.Images[s.VRAM.Index], s.ScreenXPixel, s.ScreenYPixel)
+	util.DrawImagePixel(target, s.VRAM.Images[s.VRAM.Index], s.ScreenXPixel, s.ScreenYPixel)
 }
 
 // VBlank script executed in VBlank
@@ -221,6 +224,8 @@ func VBlank() {
 		InitMapSprites()
 		world.CurWorld.Object.Initialized = true
 	}
+
+	l := util.NewImage()
 	for i, s := range store.SpriteData {
 		if store.IsInvalidSprite(uint(i)) {
 			break
@@ -228,8 +233,9 @@ func VBlank() {
 		if s.VRAM.Index < 0 {
 			continue
 		}
-		drawSprite(uint(i))
+		drawSprite(l, uint(i))
 	}
+	screen.AddLayer("sprite", screen.Sprite, l, 0, 0)
 }
 
 // GetFrontSpriteOrSign hoge
@@ -262,8 +268,13 @@ func GetFrontSpriteOrSign(offset int) int {
 		if i == offset {
 			continue
 		}
+
 		if npc == nil {
 			return -1
+		}
+
+		if npc.Hidden {
+			continue
 		}
 
 		if xCoord == npc.MapXCoord && yCoord == npc.MapYCoord {

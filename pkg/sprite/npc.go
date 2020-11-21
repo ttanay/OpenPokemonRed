@@ -48,11 +48,6 @@ func updateNPCSprite(offset uint) {
 		return
 	}
 
-	if util.ReadBit(s.MovmentStatus, 7) {
-		makeNPCFacePlayer(offset)
-		return
-	}
-
 	switch s.MovmentStatus {
 	case Delay:
 		updateSpriteMovementDelay(offset)
@@ -87,7 +82,7 @@ func updateNPCSprite(offset uint) {
 			// TODO: ChangeFacingDirection
 		case util.Stay:
 			s.MovementBytes[0] = util.Stay
-			util.ResBit(&store.D730, 0)
+			store.Flag.D730.IsNPCScripted = false
 			// TODO: [wSimulatedJoypadStatesIndex] = 0
 			return
 		case util.Walk:
@@ -171,11 +166,17 @@ func tryWalking(offset uint, direction util.Direction, deltaX, deltaY int) bool 
 func initializeSpriteStatus(offset uint) {
 	s := store.SpriteData[offset]
 	s.MovmentStatus = OK
+	if s.Hidden {
+		DisableSprite(offset)
+	}
 }
 
 func checkSpriteAvailability(offset uint) bool {
 	s := store.SpriteData[offset]
-	// TODO: IsObjectHidden
+	if s.Hidden {
+		DisableSprite(offset)
+		return false
+	}
 
 	// disable sprite when it is out of screen
 	if s.MovementBytes[0] >= util.Walk {
@@ -239,15 +240,21 @@ func notYetMoving(offset uint) {
 	s.AnimationFrame %= 4
 }
 
-// make NPC face player when player talk to NPC
-func makeNPCFacePlayer(offset uint) {
-	// D72D[5] is set on talking to SS.anne's captain
-	if util.ReadBit(store.D72D, 5) {
+// MakeNPCFacePlayer make NPC face player when player talk to NPC
+func MakeNPCFacePlayer(offset uint) {
+	// SS.anne's captain
+	if store.Flag.D72D.DontFacePlayer {
 		notYetMoving(offset)
 		return
 	}
 
 	p, s := store.SpriteData[0], store.SpriteData[offset]
+
+	// sign
+	if s == nil {
+		return
+	}
+
 	switch p.Direction {
 	case util.Up:
 		s.Direction = util.Down

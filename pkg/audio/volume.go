@@ -21,7 +21,7 @@ func setVolume(v uint) {
 	volume = v
 }
 
-func setVolumeMax() {
+func SetVolumeMax() {
 	setVolume(maxVol)
 }
 
@@ -37,8 +37,8 @@ func decrementVolume() {
 	}
 }
 
-// pokedex, status,
-func reduceVolume() {
+// ReduceVolume pokedex, status,
+func ReduceVolume() {
 	setVolume(widgetVol)
 }
 

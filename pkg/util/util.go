@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"image/color"
 	"image/png"
 	"math/rand"
@@ -130,4 +131,33 @@ func OpenImage(fs http.FileSystem, path string) *ebiten.Image {
 	img, _ := png.Decode(f)
 	result := ebiten.NewImageFromImage(img)
 	return result
+}
+
+func Padding(num interface{}, digit int, char string) string {
+	result, paddingLength := "", digit
+	switch n := num.(type) {
+	case int, uint:
+		result = fmt.Sprintf("%d", n)
+		paddingLength = digit - len(result)
+	case string:
+		result = n
+		paddingLength = digit - len(n)
+	}
+
+	for i := 0; i < paddingLength; i++ {
+		result = char + result
+	}
+	return result
+}
+
+func FlipTD(op *ebiten.DrawImageOptions, x, y int) {
+	op.GeoM.Translate(-float64(x/2), -float64(y/2))
+	op.GeoM.Scale(1, -1) // Left-right
+	op.GeoM.Translate(float64(x/2), float64(y/2))
+}
+
+func FlipLR(op *ebiten.DrawImageOptions, x, y int) {
+	op.GeoM.Translate(-float64(x/2), -float64(y/2))
+	op.GeoM.Scale(-1, 1) // Left-right
+	op.GeoM.Translate(float64(x/2), float64(y/2))
 }
